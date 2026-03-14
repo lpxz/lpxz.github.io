@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lpxz - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 600px;
+        }
+
+        .avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid #4a9eff;
+            margin-bottom: 1.5rem;
+            object-fit: cover;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            color: #8892b0;
+            margin-bottom: 2rem;
+        }
+
+        .about {
+            font-size: 1rem;
+            line-height: 1.8;
+            margin-bottom: 2rem;
+            color: #a8b2d1;
+        }
+
+        .links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(74, 158, 255, 0.1);
+            border: 1px solid #4a9eff;
+            border-radius: 8px;
+            color: #4a9eff;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .links a:hover {
+            background: #4a9eff;
+            color: #1a1a2e;
+            transform: translateY(-2px);
+        }
+
+        .projects {
+            margin-top: 3rem;
+        }
+
+        .projects h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #ffffff;
+        }
+
+        .project-list {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .project {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: left;
+            transition: all 0.3s ease;
+        }
+
+        .project:hover {
+            border-color: #4a9eff;
+            transform: translateX(5px);
+        }
+
+        .project h3 {
+            color: #4a9eff;
+            margin-bottom: 0.5rem;
+        }
+
+        .project p {
+            color: #8892b0;
+            font-size: 0.9rem;
+        }
+
+        footer {
+            margin-top: 3rem;
+            color: #5a6a8a;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://github.com/lpxz.png" alt="Avatar" class="avatar">
+
+        <h1>lpxz</h1>
+        <p class="tagline">Developer / Creator / Explorer</p>
+
+        <p class="about">
+            Welcome to my corner of the internet. I'm passionate about building
+            things and exploring new technologies. Feel free to check out my
+            projects and connect with me.
+        </p>
+
+        <div class="links">
+            <a href="https://github.com/lpxz">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                </svg>
+                GitHub
+            </a>
+            <a href="mailto:your@email.com">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+                Email
+            </a>
+            <a href="https://twitter.com/">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                Twitter
+            </a>
+        </div>
+
+        <div class="projects">
+            <h2>Featured Projects</h2>
+            <div class="project-list">
+                <a href="https://github.com/lpxz" class="project" style="text-decoration: none;">
+                    <h3>Project One</h3>
+                    <p>A brief description of your first project goes here.</p>
+                </a>
+                <a href="https://github.com/lpxz" class="project" style="text-decoration: none;">
+                    <h3>Project Two</h3>
+                    <p>A brief description of your second project goes here.</p>
+                </a>
+            </div>
+        </div>
+
+        <footer>
+            Built with care. Hosted on GitHub Pages.
+        </footer>
+    </div>
+</body>
+</html>
