@@ -113,6 +113,35 @@
             color: #ffffff;
         }
 
+        .blog-list {
+            list-style: none;
+        }
+
+        .blog-list li {
+            padding: 1rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .blog-list li:last-child {
+            border-bottom: none;
+        }
+
+        .blog-list a {
+            color: #2563eb;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .blog-list a:hover {
+            text-decoration: underline;
+        }
+
+        .blog-list .date {
+            color: #6b7280;
+            font-size: 0.85rem;
+            margin-left: 0.5rem;
+        }
+
         footer {
             text-align: center;
             color: #6b7280;
@@ -174,6 +203,16 @@
             <p>
                 Currently, I am a Staff Engineer at Uber in New York. I worked at Google, IBM Research, and Purdue previously.
             </p>
+        </section>
+
+        <section class="blog">
+            <h2>Blog</h2>
+            <ul class="blog-list">
+                <li>
+                    <a href="#">Placeholder Post Title</a>
+                    <span class="date">March 2026</span>
+                </li>
+            </ul>
         </section>
 
         <footer>
