@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Understanding IFDS and IDE: Precise Interprocedural Dataflow Analysis - Peng Liu</title>
+    <title>IFDS: Turning Program Analysis into a Graph Problem - Peng Liu</title>
     <style>
         * {
             margin: 0;
@@ -60,13 +60,6 @@
             border-bottom: 2px solid #4a9eff;
         }
 
-        h3 {
-            font-size: 1.15rem;
-            color: #4a9eff;
-            margin-top: 1.5rem;
-            margin-bottom: 0.75rem;
-        }
-
         p {
             color: #a8b2d1;
             margin-bottom: 1rem;
@@ -106,14 +99,6 @@
             padding: 0;
         }
 
-        blockquote {
-            border-left: 3px solid #4a9eff;
-            padding-left: 1rem;
-            margin: 1.5rem 0;
-            color: #8892b0;
-            font-style: italic;
-        }
-
         a {
             color: #4a9eff;
             text-decoration: none;
@@ -131,18 +116,8 @@
             margin: 1.5rem 0;
         }
 
-        .diagram {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin: 1.5rem 0;
-            text-align: center;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 0.85rem;
-            line-height: 1.4;
-            white-space: pre;
-            overflow-x: auto;
+        .highlight strong {
+            color: #ffffff;
         }
 
         .references {
@@ -190,9 +165,6 @@
             h1 {
                 font-size: 1.8rem;
             }
-            .diagram {
-                font-size: 0.75rem;
-            }
         }
     </style>
 </head>
@@ -203,226 +175,142 @@
         </nav>
 
         <article>
-            <h1>Understanding IFDS and IDE: Precise Interprocedural Dataflow Analysis</h1>
+            <h1>IFDS: Turning Program Analysis into a Graph Problem</h1>
             <p class="meta">March 2026 | Program Analysis</p>
 
             <p>
-                In this post, I'll explain the IFDS (Interprocedural Finite Distributive Subset) and IDE (Interprocedural Distributive Environment) frameworks, which are foundational techniques for precise interprocedural dataflow analysis. These algorithms, introduced by Thomas Reps, Susan Horwitz, and Mooly Sagiv in their seminal 1995 POPL paper, transformed how we think about analyzing programs across procedure boundaries.
+                How do security tools find bugs in million-line codebases? One powerful technique is IFDS, which turns the question "can bad data reach this dangerous function?" into "can I find a path in this graph?" This simple insight, from a 1995 paper by Reps, Horwitz, and Sagiv, powers tools like FlowDroid that find privacy leaks in Android apps.
             </p>
 
-            <h2>The Problem: Interprocedural Analysis</h2>
+            <h2>The Problem: Tracking Data Across Functions</h2>
 
             <p>
-                Traditional intraprocedural dataflow analysis handles a single function at a time. But real programs have procedure calls, and analyzing them precisely requires tracking dataflow facts as they flow through call sites and return sites. The challenge is maintaining <strong>context sensitivity</strong>: ensuring that facts computed for a procedure call are returned to the correct call site.
-            </p>
-
-            <p>
-                Consider this simple example:
+                Imagine you're checking if user input can reach a database query (a SQL injection risk). The tricky part? The data flows through multiple functions:
             </p>
 
             <pre><code>void main() {
-    x = source();     // x is tainted
-    y = sanitize(x);  // y is clean
-    sink(y);          // safe!
+    String input = getUserInput();  // dangerous!
+    String clean = sanitize(input); // now safe
+    query(clean);                   // is this safe?
 }
 
 String sanitize(String s) {
-    return validate(s);
+    return escape(s);  // removes dangerous characters
 }</code></pre>
 
             <p>
-                A naive analysis might conflate facts from different call sites. IFDS solves this by reducing dataflow analysis to a graph reachability problem with special handling for procedure boundaries.
+                A naive approach might see <code>input</code> go into <code>sanitize()</code> and think the danger flows through. But <code>sanitize()</code> actually cleans the data! We need to track what each function <em>does</em> to the data, not just that data passed through it.
             </p>
 
-            <h2>The IFDS Framework</h2>
+            <h2>The Key Insight: Explode the Graph</h2>
 
             <p>
-                IFDS works for dataflow problems where:
-            </p>
-
-            <ul>
-                <li>The domain <code>D</code> is finite (or can be made finite through abstraction)</li>
-                <li>The flow functions are <strong>distributive</strong>: <code>f(a &cup; b) = f(a) &cup; f(b)</code></li>
-                <li>The meet operator is set union or intersection</li>
-            </ul>
-
-            <p>
-                Examples include reaching definitions, possibly-uninitialized variables, taint analysis, and typestate analysis.
+                Here's the clever trick: instead of asking "what facts are true at this line?", we build a graph where each node represents a <strong>specific fact at a specific line</strong>.
             </p>
 
             <figure class="figure">
-                <img src="images/ifds-framework.jpg" alt="IFDS Framework overview showing subset problem, distributive property, and key applications">
-                <figcaption>The IFDS Framework: reducing inter-procedural analysis to graph reachability. (Source: Eric Bodden's DECA Course)</figcaption>
+                <img src="images/ifds-exploded-supergraph.jpg" alt="Exploded Supergraph concept">
+                <figcaption>The "exploded" graph: each program point gets multiple nodes, one per fact we're tracking. (Source: Eric Bodden's DECA Course)</figcaption>
             </figure>
 
-            <h3>The Exploded Supergraph</h3>
-
             <p>
-                The key insight of IFDS is the <strong>exploded supergraph</strong>. Instead of computing sets of facts at each program point, we "explode" the control flow graph: for each CFG node <code>n</code> and each dataflow fact <code>d</code>, we create an exploded node <code>(n, d)</code>.
-            </p>
-
-            <figure class="figure">
-                <img src="images/ifds-exploded-supergraph.jpg" alt="Exploded Supergraph = CFG tensor Flow Functions">
-                <figcaption>The Exploded Super Graph is the cross product of the CFG and flow functions. (Source: Eric Bodden's DECA Course)</figcaption>
-            </figure>
-
-            <div class="diagram">
-              CFG Node n:          Exploded at n:
-
-                 [n]          &Lambda;   d1   d2   d3
-                  |            o----o----o----o
-                  v                  \  / \
-                                      \/   \
-                 [n']         &Lambda;   d1   d2   d3
-                               o----o----o----o
-            </div>
-
-            <p>
-                Each node in the exploded supergraph has a special <code>&Lambda;</code> (Lambda) node representing "no fact" or the initial state. Edges in the exploded graph encode the flow functions:
-            </p>
-
-            <ul>
-                <li><strong>Identity</strong>: An edge from <code>(n, d)</code> to <code>(n', d)</code> means fact <code>d</code> is preserved</li>
-                <li><strong>Gen</strong>: An edge from <code>(n, &Lambda;)</code> to <code>(n', d)</code> means fact <code>d</code> is generated</li>
-                <li><strong>Kill</strong>: Missing edge from <code>(n, d)</code> to <code>(n', d)</code> means fact <code>d</code> is killed</li>
-            </ul>
-
-            <h3>Realizable Paths</h3>
-
-            <p>
-                The crucial concept is <strong>realizable paths</strong>. A path in the exploded supergraph is realizable if it respects call-return matching: every return edge corresponds to its matching call edge. This ensures context sensitivity.
+                Think of it like this: instead of one maze with colored markers, we build a separate maze for each color. Now finding "does red reach the exit?" is just pathfinding.
             </p>
 
             <div class="highlight">
-                <strong>Key Theorem:</strong> A dataflow fact <code>d</code> holds at program point <code>n</code> if and only if there exists a realizable path from <code>(entry_main, &Lambda;)</code> to <code>(n, d)</code> in the exploded supergraph.
+                <strong>The Core Idea:</strong> "Is variable X tainted at line 20?" becomes "Is there a path to node (line 20, X) in our graph?"
             </div>
 
-            <h3>The Tabulation Algorithm</h3>
+            <h2>How Facts Flow: Gen, Kill, Propagate</h2>
 
             <p>
-                The IFDS tabulation algorithm efficiently computes reachability by:
+                The edges in our graph encode what happens to facts at each statement:
+            </p>
+
+            <ul>
+                <li><strong>Generate:</strong> <code>x = secret()</code> creates taint on X (new edge appears)</li>
+                <li><strong>Kill:</strong> <code>x = 0</code> removes taint on X (edge disappears)</li>
+                <li><strong>Propagate:</strong> <code>y = x</code> copies taint from X to Y (edge connects them)</li>
+            </ul>
+
+            <figure class="figure">
+                <img src="images/ifds-taint-analysis.jpg" alt="Taint propagation example">
+                <figcaption>Taint flows from f to g through assignment: if f is tainted, g becomes tainted too. (Source: Eric Bodden's DECA Course)</figcaption>
+            </figure>
+
+            <figure class="figure">
+                <img src="images/ifds-generating-values.jpg" alt="Generating new taint">
+                <figcaption>Calling secret() generates new taint. The "0" node (always reachable) lets us create facts unconditionally. (Source: Eric Bodden's DECA Course)</figcaption>
+            </figure>
+
+            <h2>Handling Function Calls Correctly</h2>
+
+            <p>
+                The hardest part is function calls. When <code>main()</code> calls <code>sanitize()</code>, we need to:
             </p>
 
             <ol>
-                <li>Processing edges in a worklist fashion</li>
-                <li>Computing <strong>summary edges</strong> that capture the effect of entire procedure calls</li>
-                <li>Propagating facts along intraprocedural edges</li>
-                <li>At call sites, computing which facts reach the entry of the called procedure</li>
-                <li>At return sites, using summary edges to determine which facts return to the caller</li>
+                <li>Pass facts from the call site to the function entry</li>
+                <li>Analyze what the function does</li>
+                <li>Bring the results back to the <em>right</em> call site</li>
             </ol>
 
             <p>
-                The complexity is <code>O(E &middot; D&sup3;)</code> where <code>E</code> is the number of edges in the supergraph and <code>D</code> is the size of the dataflow domain.
-            </p>
-
-            <h2>Flow Functions</h2>
-
-            <p>
-                IFDS uses four types of flow functions:
-            </p>
-
-            <h3>1. Normal Flow Functions</h3>
-            <p>
-                Handle intraprocedural edges (assignments, branches, etc.). For taint analysis, an assignment <code>x = y</code> would propagate taint from <code>y</code> to <code>x</code>.
+                That last part is crucial. If <code>foo()</code> calls <code>sanitize()</code> and <code>bar()</code> also calls <code>sanitize()</code>, we can't mix up their results. IFDS handles this by only following paths that match calls with their returns—like matching parentheses.
             </p>
 
             <figure class="figure">
-                <img src="images/ifds-taint-analysis.jpg" alt="Taint analysis flow function showing how taint propagates through assignment">
-                <figcaption>Taint analysis as an IFDS problem: g is tainted iff f was previously tainted. (Source: Eric Bodden's DECA Course)</figcaption>
+                <img src="images/ifds-framework.jpg" alt="IFDS Framework overview">
+                <figcaption>IFDS works for many analysis problems: taint tracking, typestate, alias analysis, and more. (Source: Eric Bodden's DECA Course)</figcaption>
             </figure>
 
-            <figure class="figure">
-                <img src="images/ifds-generating-values.jpg" alt="Generating values with the tautological fact (0/Lambda)">
-                <figcaption>Generating new facts: the tautological fact (0) is always reachable, enabling unconditional fact generation. (Source: Eric Bodden's DECA Course)</figcaption>
-            </figure>
-
-            <h3>2. Call Flow Functions</h3>
-            <p>
-                Map facts at a call site to facts at the entry of the called procedure. Typically maps actual parameters to formal parameters.
-            </p>
-
-            <h3>3. Return Flow Functions</h3>
-            <p>
-                Map facts at the exit of a procedure back to the call site. Maps return values and handles out-parameters.
-            </p>
-
-            <h3>4. Call-to-Return Flow Functions</h3>
-            <p>
-                Propagate facts that bypass the call (local variables not affected by the call). This is critical for efficiency.
-            </p>
-
-            <h2>IDE: Extending IFDS with Environments</h2>
+            <h2>IDE: When You Need Values, Not Just Yes/No</h2>
 
             <p>
-                While IFDS tracks <em>which</em> facts hold, IDE (Interprocedural Distributive Environment) extends this to track <em>values</em> associated with facts. Instead of just knowing "variable x is constant," IDE can tell you "variable x equals 42."
+                IFDS answers yes/no questions: "Is X tainted?" But sometimes you need values: "What is X's value?"
             </p>
 
             <p>
-                IDE works by associating <strong>edge functions</strong> (also called micro-functions) with exploded supergraph edges. These functions compose along paths, allowing the algorithm to compute environment transformers.
+                IDE extends IFDS to track values. Instead of just knowing "X is constant," IDE tells you "X equals 42." It does this by attaching small functions to each edge that transform values as they flow.
             </p>
 
             <div class="highlight">
-                <strong>IDE vs IFDS:</strong> IFDS answers "Is fact d true at point n?" while IDE answers "What is the value of d at point n?"
+                <strong>IFDS vs IDE:</strong> IFDS asks "Does this fact reach here?" IDE asks "What value does this fact have here?"
             </div>
 
-            <h2>Practical Applications</h2>
-
-            <h3>FlowDroid and Android Taint Analysis</h3>
+            <h2>Real-World Impact: FlowDroid</h2>
 
             <p>
-                <a href="https://blogs.uni-paderborn.de/sse/tools/flowdroid/">FlowDroid</a>, developed by Eric Bodden's group, is a prominent IFDS-based tool for Android security analysis. It performs precise taint analysis to detect privacy leaks in Android apps, achieving 93% recall and 86% precision on the DroidBench benchmark.
+                <a href="https://blogs.uni-paderborn.de/sse/tools/flowdroid/">FlowDroid</a> uses IFDS to find privacy leaks in Android apps. It answers: "Can data from your contacts/location/photos reach the internet?"
             </p>
 
             <p>
-                FlowDroid demonstrates IFDS's practical impact: it's fully context-, flow-, field-, and object-sensitive while correctly modeling the Android lifecycle.
-            </p>
-
-            <h3>Heros: A Generic IFDS/IDE Solver</h3>
-
-            <p>
-                The <a href="https://github.com/Sable/heros">Heros</a> framework provides a language-agnostic implementation of IFDS/IDE that can be plugged into any analysis framework. Built on top of <a href="http://soot-oss.github.io/soot/">Soot</a>, it has been used for analyzing Java, Android, and other JVM languages.
+                FlowDroid achieves 93% recall and 86% precision—it finds most real leaks while keeping false alarms low. It powers security analysis for millions of Android apps.
             </p>
 
             <h2>Key Takeaways</h2>
 
             <ul>
-                <li>IFDS reduces interprocedural dataflow analysis to graph reachability</li>
-                <li>The exploded supergraph encodes flow functions as edges</li>
-                <li>Realizable paths ensure context sensitivity (proper call-return matching)</li>
-                <li>Summary edges make the analysis efficient by caching procedure effects</li>
-                <li>IDE extends IFDS to track values, not just reachability</li>
-                <li>These techniques underpin modern static analysis tools like FlowDroid</li>
+                <li><strong>Graph reachability:</strong> IFDS turns "can bad data reach here?" into "is there a path in this graph?"</li>
+                <li><strong>Exploded graph:</strong> Each node is (program point, fact), so pathfinding gives us dataflow answers</li>
+                <li><strong>Correct call handling:</strong> Paths must match calls with their returns, like balanced parentheses</li>
+                <li><strong>IDE for values:</strong> When yes/no isn't enough, IDE tracks actual values through the program</li>
+                <li><strong>Practical impact:</strong> FlowDroid and similar tools use this to find real security bugs</li>
             </ul>
 
             <div class="references">
-                <h2>References and Further Reading</h2>
+                <h2>References</h2>
                 <ul>
                     <li>
-                        Reps, T., Horwitz, S., & Sagiv, M. (1995). <em>Precise Interprocedural Dataflow Analysis via Graph Reachability</em>. POPL '95.
+                        Reps, Horwitz, & Sagiv. <em>Precise Interprocedural Dataflow Analysis via Graph Reachability</em>. POPL 1995.
                         [<a href="https://research.cs.wisc.edu/wpis/papers/popl95.pdf">PDF</a>]
                     </li>
                     <li>
-                        Sagiv, M., Reps, T., & Horwitz, S. (1996). <em>Precise Interprocedural Dataflow Analysis with Applications to Constant Propagation</em>. TOPLAS.
-                    </li>
-                    <li>
-                        Bodden, E. (2012). <em>Inter-procedural data-flow analysis with IFDS/IDE and Soot</em>. SOAP '12.
-                        [<a href="https://www.researchgate.net/publication/236980409_Inter-procedural_data-flow_analysis_with_IFDSIDE_and_Soot">Link</a>]
-                    </li>
-                    <li>
-                        Arzt, S., et al. (2014). <em>FlowDroid: Precise Context, Flow, Field, Object-sensitive and Lifecycle-aware Taint Analysis for Android Apps</em>. PLDI '14.
+                        Arzt et al. <em>FlowDroid: Precise Taint Analysis for Android Apps</em>. PLDI 2014.
                         [<a href="https://www.bodden.de/pubs/far+14flowdroid.pdf">PDF</a>]
                     </li>
                     <li>
-                        <a href="https://pages.cs.wisc.edu/~fischer/cs701.f14/6.INTERPROCEDURAL-ANALYSIS.html">Wisconsin CS701 - Interprocedural Analysis Tutorial</a>
-                    </li>
-                    <li>
-                        Video: <a href="https://www.youtube.com/watch?v=y7iLreS37MA">T7 - IFDS (Part 1)</a> by Karim Ali
-                    </li>
-                    <li>
-                        Video: <a href="https://www.youtube.com/watch?v=lJbiwYa6mVM">T7 - IFDS 2 (+ intro to IDE)</a> by Karim Ali
-                    </li>
-                    <li>
-                        Video: <a href="https://www.youtube.com/watch?v=QkK79fT0TFU">DECA I - Week 12 - Intro to IFDS</a> by Eric Bodden's Secure Software Engineering Group
+                        Video: <a href="https://www.youtube.com/watch?v=QkK79fT0TFU">Intro to IFDS</a> by Eric Bodden's group
                     </li>
                 </ul>
             </div>
