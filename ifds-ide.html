@@ -168,6 +168,24 @@
             border-top: 1px solid rgba(255,255,255,0.1);
         }
 
+        .figure {
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+
+        .figure img {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .figure figcaption {
+            color: #8892b0;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
         @media (max-width: 600px) {
             h1 {
                 font-size: 1.8rem;
@@ -232,11 +250,21 @@ String sanitize(String s) {
                 Examples include reaching definitions, possibly-uninitialized variables, taint analysis, and typestate analysis.
             </p>
 
+            <figure class="figure">
+                <img src="images/ifds-framework.jpg" alt="IFDS Framework overview showing subset problem, distributive property, and key applications">
+                <figcaption>The IFDS Framework: reducing inter-procedural analysis to graph reachability. (Source: Eric Bodden's DECA Course)</figcaption>
+            </figure>
+
             <h3>The Exploded Supergraph</h3>
 
             <p>
                 The key insight of IFDS is the <strong>exploded supergraph</strong>. Instead of computing sets of facts at each program point, we "explode" the control flow graph: for each CFG node <code>n</code> and each dataflow fact <code>d</code>, we create an exploded node <code>(n, d)</code>.
             </p>
+
+            <figure class="figure">
+                <img src="images/ifds-exploded-supergraph.jpg" alt="Exploded Supergraph = CFG tensor Flow Functions">
+                <figcaption>The Exploded Super Graph is the cross product of the CFG and flow functions. (Source: Eric Bodden's DECA Course)</figcaption>
+            </figure>
 
             <div class="diagram">
               CFG Node n:          Exploded at n:
@@ -297,6 +325,16 @@ String sanitize(String s) {
             <p>
                 Handle intraprocedural edges (assignments, branches, etc.). For taint analysis, an assignment <code>x = y</code> would propagate taint from <code>y</code> to <code>x</code>.
             </p>
+
+            <figure class="figure">
+                <img src="images/ifds-taint-analysis.jpg" alt="Taint analysis flow function showing how taint propagates through assignment">
+                <figcaption>Taint analysis as an IFDS problem: g is tainted iff f was previously tainted. (Source: Eric Bodden's DECA Course)</figcaption>
+            </figure>
+
+            <figure class="figure">
+                <img src="images/ifds-generating-values.jpg" alt="Generating values with the tautological fact (0/Lambda)">
+                <figcaption>Generating new facts: the tautological fact (0) is always reachable, enabling unconditional fact generation. (Source: Eric Bodden's DECA Course)</figcaption>
+            </figure>
 
             <h3>2. Call Flow Functions</h3>
             <p>
@@ -382,6 +420,9 @@ String sanitize(String s) {
                     </li>
                     <li>
                         Video: <a href="https://www.youtube.com/watch?v=lJbiwYa6mVM">T7 - IFDS 2 (+ intro to IDE)</a> by Karim Ali
+                    </li>
+                    <li>
+                        Video: <a href="https://www.youtube.com/watch?v=QkK79fT0TFU">DECA I - Week 12 - Intro to IFDS</a> by Eric Bodden's Secure Software Engineering Group
                     </li>
                 </ul>
             </div>
