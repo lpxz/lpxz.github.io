@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blog - Peng Liu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,15 +15,15 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #e0e0e0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            color: #a0a0b0;
             min-height: 100vh;
             line-height: 1.6;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 3rem 2rem;
         }
@@ -30,26 +33,98 @@
         }
 
         nav a {
-            color: #4a9eff;
+            color: #6366f1;
             text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
         }
 
         nav a:hover {
-            text-decoration: underline;
+            color: #818cf8;
         }
 
         h1 {
-            font-size: 2.2rem;
-            color: #ffffff;
+            font-size: 2.4rem;
+            color: #f0f0f5;
             margin-bottom: 0.5rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #4a9eff;
+            font-weight: 700;
         }
 
         .subtitle {
-            color: #8892b0;
-            margin-bottom: 2rem;
-            font-size: 1rem;
+            color: #606070;
+            margin-bottom: 2.5rem;
+            font-size: 1.05rem;
+        }
+
+        /* Category Tabs */
+        .category-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 2.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 1rem;
+        }
+
+        .category-tab {
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #a0a0b0;
+            user-select: none;
+        }
+
+        .category-tab:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+            color: #f0f0f5;
+        }
+
+        .category-tab.active {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: #6366f1;
+            color: #818cf8;
+        }
+
+        .category-count {
+            display: inline-block;
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            font-size: 0.75rem;
+            padding: 0.1rem 0.45rem;
+            border-radius: 10px;
+            margin-left: 0.3rem;
+            font-weight: 600;
+        }
+
+        /* Category Sections */
+        .category-section {
+            margin-bottom: 2.5rem;
+            display: none;
+        }
+
+        .category-section.active {
+            display: block;
+        }
+
+        .category-heading {
+            font-size: 1.3rem;
+            color: #f0f0f5;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-icon {
+            font-size: 1.1rem;
         }
 
         .blog-list {
@@ -58,61 +133,65 @@
 
         .blog-list li {
             padding: 1.5rem;
-            margin-bottom: 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
             transition: all 0.3s ease;
         }
 
         .blog-list li:hover {
-            background: rgba(74, 158, 255, 0.1);
-            border-color: rgba(74, 158, 255, 0.3);
+            background: rgba(99, 102, 241, 0.06);
+            border-color: rgba(99, 102, 241, 0.2);
+            transform: translateY(-1px);
         }
 
         .blog-list a {
-            color: #ffffff;
+            color: #f0f0f5;
             text-decoration: none;
-            font-size: 1.2rem;
-            font-weight: 500;
+            font-size: 1.1rem;
+            font-weight: 600;
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.4rem;
+            transition: color 0.2s;
         }
 
         .blog-list a:hover {
-            color: #4a9eff;
+            color: #818cf8;
         }
 
         .blog-list .date {
-            color: #4a9eff;
-            font-size: 0.85rem;
-            margin-bottom: 0.5rem;
+            color: #6366f1;
+            font-size: 0.8rem;
+            margin-bottom: 0.4rem;
+            font-weight: 500;
         }
 
         .blog-list .description {
-            color: #a8b2d1;
-            font-size: 0.95rem;
+            color: #a0a0b0;
+            font-size: 0.92rem;
             line-height: 1.5;
         }
 
         .tag {
             display: inline-block;
-            background: rgba(74, 158, 255, 0.15);
-            color: #4a9eff;
-            padding: 0.2rem 0.6rem;
+            background: rgba(99, 102, 241, 0.12);
+            color: #818cf8;
+            padding: 0.15rem 0.55rem;
             border-radius: 4px;
-            font-size: 0.8rem;
-            margin-right: 0.5rem;
+            font-size: 0.75rem;
+            margin-right: 0.4rem;
             margin-top: 0.5rem;
+            font-weight: 500;
         }
 
         footer {
             text-align: center;
-            color: #5a6a8a;
+            color: #606070;
             font-size: 0.85rem;
             padding-top: 2rem;
             margin-top: 3rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid rgba(255,255,255,0.06);
         }
 
         @media (max-width: 600px) {
@@ -121,6 +200,13 @@
             }
             .blog-list li {
                 padding: 1rem;
+            }
+            .category-tabs {
+                gap: 0.3rem;
+            }
+            .category-tab {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.82rem;
             }
         }
     </style>
@@ -132,23 +218,142 @@
         </nav>
 
         <h1>Blog</h1>
-        <p class="subtitle">Thoughts on program analysis, software engineering, and more.</p>
+        <p class="subtitle">Thoughts on program analysis, operating systems, distributed systems, and more.</p>
 
-        <ul class="blog-list">
-            <li>
-                <a href="ifds-ide.html">IFDS: Turning Program Analysis into a Graph Problem</a>
-                <div class="date">March 2026</div>
-                <p class="description">
-                    How do security tools find bugs in million-line codebases? IFDS turns "can bad data reach here?" into simple graph pathfinding. The key insight behind tools like FlowDroid.
-                </p>
-                <span class="tag">Program Analysis</span>
-                <span class="tag">Security</span>
-            </li>
-        </ul>
+        <!-- Category Tabs -->
+        <div class="category-tabs">
+            <div class="category-tab active" data-category="all">All <span class="category-count">3</span></div>
+            <div class="category-tab" data-category="program-analysis">Program Analysis <span class="category-count">1</span></div>
+            <div class="category-tab" data-category="linux-kernel">Linux Kernel <span class="category-count">1</span></div>
+            <div class="category-tab" data-category="distributed-systems">Distributed Systems <span class="category-count">0</span></div>
+            <div class="category-tab" data-category="agents">Agents <span class="category-count">1</span></div>
+            <div class="category-tab" data-category="others">Others <span class="category-count">0</span></div>
+        </div>
+
+        <!-- All Posts -->
+        <div class="category-section active" id="all">
+            <ul class="blog-list">
+                <li data-category="agents">
+                    <a href="agent-skills.html">Agent Skills: Separating Judgment from Capability in LLM Agents</a>
+                    <div class="date">March 2026</div>
+                    <p class="description">
+                        LLMs can reason, write code, and call APIs. What they can't do is remember how you want things done. Skills fill that gap &mdash; encoding expert judgment as reusable markdown that loads on demand.
+                    </p>
+                    <span class="tag">Agents</span>
+                    <span class="tag">LLM</span>
+                </li>
+                <li data-category="program-analysis">
+                    <a href="ifds-ide.html">IFDS: Turning Program Analysis into a Graph Problem</a>
+                    <div class="date">March 2026</div>
+                    <p class="description">
+                        How do security tools find bugs in million-line codebases? IFDS turns "can bad data reach here?" into simple graph pathfinding. The key insight behind tools like FlowDroid.
+                    </p>
+                    <span class="tag">Program Analysis</span>
+                    <span class="tag">Security</span>
+                </li>
+                <li data-category="linux-kernel">
+                    <a href="ostep.html">Operating Systems: Three Easy Pieces — Explained Simply</a>
+                    <div class="date">March 2026</div>
+                    <p class="description">
+                        The classic OSTEP textbook, broken down chapter by chapter in plain language. Virtualization, concurrency, persistence — explained like you're in high school.
+                    </p>
+                    <span class="tag">Operating Systems</span>
+                    <span class="tag">Linux Kernel</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Program Analysis -->
+        <div class="category-section" id="program-analysis">
+            <div class="category-heading"><span class="category-icon">&#x1F50D;</span> Program Analysis</div>
+            <ul class="blog-list">
+                <li>
+                    <a href="ifds-ide.html">IFDS: Turning Program Analysis into a Graph Problem</a>
+                    <div class="date">March 2026</div>
+                    <p class="description">
+                        How do security tools find bugs in million-line codebases? IFDS turns "can bad data reach here?" into simple graph pathfinding. The key insight behind tools like FlowDroid.
+                    </p>
+                    <span class="tag">Program Analysis</span>
+                    <span class="tag">Security</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Linux Kernel -->
+        <div class="category-section" id="linux-kernel">
+            <div class="category-heading"><span class="category-icon">&#x1F427;</span> Linux Kernel</div>
+            <ul class="blog-list">
+                <li>
+                    <a href="ostep.html">Operating Systems: Three Easy Pieces — Explained Simply</a>
+                    <div class="date">March 2026</div>
+                    <p class="description">
+                        The classic OSTEP textbook, broken down chapter by chapter in plain language. Virtualization, concurrency, persistence — explained like you're in high school.
+                    </p>
+                    <span class="tag">Operating Systems</span>
+                    <span class="tag">Linux Kernel</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Distributed Systems -->
+        <div class="category-section" id="distributed-systems">
+            <div class="category-heading"><span class="category-icon">&#x1F310;</span> Distributed Systems</div>
+            <ul class="blog-list">
+                <li style="text-align: center; color: #606070; border-style: dashed;">
+                    <p>Coming soon...</p>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Agents -->
+        <div class="category-section" id="agents">
+            <div class="category-heading"><span class="category-icon">&#x1F916;</span> Agents</div>
+            <ul class="blog-list">
+                <li>
+                    <a href="agent-skills.html">Agent Skills: Separating Judgment from Capability in LLM Agents</a>
+                    <div class="date">March 2026</div>
+                    <p class="description">
+                        LLMs can reason, write code, and call APIs. What they can't do is remember how you want things done. Skills fill that gap &mdash; encoding expert judgment as reusable markdown that loads on demand.
+                    </p>
+                    <span class="tag">Agents</span>
+                    <span class="tag">LLM</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Others -->
+        <div class="category-section" id="others">
+            <div class="category-heading"><span class="category-icon">&#x1F4DD;</span> Others</div>
+            <ul class="blog-list">
+                <li style="text-align: center; color: #606070; border-style: dashed;">
+                    <p>Coming soon...</p>
+                </li>
+            </ul>
+        </div>
 
         <footer>
             Peng Liu | Hosted on GitHub Pages
         </footer>
     </div>
+
+    <script>
+        // Category tab switching
+        const tabs = document.querySelectorAll('.category-tab');
+        const sections = document.querySelectorAll('.category-section');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const category = tab.dataset.category;
+
+                // Update active tab
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Show matching section
+                sections.forEach(s => s.classList.remove('active'));
+                document.getElementById(category).classList.add('active');
+            });
+        });
+    </script>
 </body>
 </html>

@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Skills: Separating Judgment from Capability in LLM Agents - Peng Liu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.08);
+            --code-bg: #1e1e2e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-size: 17px;
+        }
+
+        /* Reading Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        nav a:hover {
+            color: var(--accent-light);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 8rem 2rem 4rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tag {
+            background: var(--accent-glow);
+            color: var(--accent-light);
+            padding: 0.4rem 1rem;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Table of Contents */
+        .toc {
+            position: fixed;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            display: none;
+        }
+
+        @media (min-width: 1400px) {
+            .toc {
+                display: block;
+            }
+        }
+
+        .toc-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        .toc a {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0.5rem 0;
+            border-left: 2px solid var(--border);
+            padding-left: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .toc a:hover, .toc a.active {
+            color: var(--accent-light);
+            border-left-color: var(--accent);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 2rem 6rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 4rem 0 1.5rem;
+            letter-spacing: -0.01em;
+            position: relative;
+        }
+
+        h2::before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0.5rem;
+            width: 4px;
+            height: 1.5rem;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light));
+            border-radius: 2px;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Links */
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--text-primary);
+        }
+
+        .container p a {
+            background: linear-gradient(180deg, transparent 60%, var(--accent-glow) 60%);
+            padding: 0 0.2rem;
+        }
+
+        .container p a:hover {
+            background: linear-gradient(180deg, transparent 60%, rgba(99, 102, 241, 0.3) 60%);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.75rem;
+            padding-left: 0.5rem;
+        }
+
+        li::marker {
+            color: var(--accent);
+        }
+
+        /* Code */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            background: var(--bg-tertiary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            color: var(--accent-light);
+        }
+
+        pre {
+            background: var(--code-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 2rem 0;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        pre::before {
+            content: '';
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* Syntax Highlighting */
+        .keyword { color: #c678dd; }
+        .string { color: #98c379; }
+        .function { color: #61afef; }
+        .comment { color: #5c6370; font-style: italic; }
+        .type { color: #e5c07b; }
+        .attr { color: #d19a66; }
+
+        /* Highlight Box */
+        .highlight {
+            background: linear-gradient(135deg, var(--accent-glow), transparent);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .highlight::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light));
+        }
+
+        .highlight strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .highlight p {
+            margin: 0;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            font-size: 0.92rem;
+        }
+
+        .comparison-table th {
+            text-align: left;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-weight: 600;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .comparison-table td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .comparison-table tr:hover td {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .comparison-table .dim-label {
+            color: var(--accent-light);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* Stat Cards */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-card .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-light);
+            display: block;
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+        }
+
+        /* Architecture Diagram */
+        .arch-diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            overflow-x: auto;
+        }
+
+        .arch-diagram .level-label {
+            color: var(--accent-light);
+            font-weight: 600;
+        }
+
+        .arch-diagram .arrow {
+            color: var(--text-muted);
+        }
+
+        .arch-diagram .desc {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        /* Key Takeaways */
+        .takeaways {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 3rem 0;
+            border: 1px solid var(--border);
+        }
+
+        .takeaways h2 {
+            margin-top: 0;
+        }
+
+        .takeaways h2::before {
+            display: none;
+        }
+
+        .takeaways ul {
+            margin-bottom: 0;
+        }
+
+        .takeaways li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .takeaways li:last-child {
+            border-bottom: none;
+        }
+
+        .takeaways strong {
+            color: var(--accent-light);
+        }
+
+        /* References */
+        .references {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .references h2::before {
+            display: none;
+        }
+
+        .references ol {
+            list-style: none;
+            padding-left: 0;
+            counter-reset: ref-counter;
+        }
+
+        .references li {
+            counter-increment: ref-counter;
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .references li::before {
+            content: counter(ref-counter);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 1.5rem;
+        }
+
+        .references li:last-child {
+            border-bottom: none;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--text-muted);
+        }
+
+        footer a:hover {
+            color: var(--accent-light);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero, .container > * {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body {
+                font-size: 16px;
+            }
+
+            .hero {
+                padding: 6rem 1.5rem 2rem;
+            }
+
+            .container {
+                padding: 0 1.5rem 4rem;
+            }
+
+            h2::before {
+                display: none;
+            }
+
+            pre {
+                border-radius: 0;
+                margin: 2rem -1.5rem;
+            }
+
+            .stat-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .comparison-table {
+                font-size: 0.8rem;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progress"></div>
+
+    <nav>
+        <a href="index.html" style="color: var(--text-primary); font-weight: 600;">Peng Liu</a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="blogs.html">Blog</a>
+            <a href="publications.html">Publications</a>
+        </div>
+    </nav>
+
+    <div class="toc">
+        <div class="toc-title">Contents</div>
+        <a href="#problem">The Problem</a>
+        <a href="#insight">Key Insight</a>
+        <a href="#architecture">The Architecture</a>
+        <a href="#vs-tools">Skills vs. Tools</a>
+        <a href="#data">The Data</a>
+        <a href="#impact">Real-World Impact</a>
+        <a href="#takeaways">Takeaways</a>
+    </div>
+
+    <header class="hero">
+        <div class="hero-meta">
+            <span class="tag">Agents</span>
+            <span class="date">March 2026</span>
+        </div>
+        <h1>Agent Skills: Separating Judgment from Capability in LLM Agents</h1>
+        <p class="subtitle">
+            LLMs can reason, write code, and call APIs. What they can't do is remember how <em>you</em> want things done. Skills fix that gap &mdash; and the data shows why this distinction matters more than adding more tools.
+        </p>
+    </header>
+
+    <main class="container">
+        <h2 id="problem">The Problem: Every Conversation Starts from Zero</h2>
+
+        <p>
+            You've spent twenty minutes explaining to an LLM exactly how to write a blog post for your site &mdash; the design system, the writing philosophy, the publish workflow. It nails it. The next day, you open a new chat and start from scratch.
+        </p>
+
+        <p>
+            This isn't a memory problem. It's a <strong>judgment problem</strong>. The LLM already knows how to write HTML, call shell commands, and generate prose. What it doesn't know is your specific workflow: that you prefer insight-first writing over step-by-step tutorials, that images should use <code>border-radius: 16px</code>, that you publish with <code>git push</code> to GitHub Pages.
+        </p>
+
+        <p>
+            The standard fix is to give the LLM more <em>tools</em> &mdash; file access, web search, browser automation. But consider: a developer with access to every tool on earth still doesn't know how to do your job. Tools provide capability. What's missing is judgment.
+        </p>
+
+        <div class="highlight">
+            <p><strong>The Gap:</strong> LLMs have broad capability but zero domain-specific expert judgment. Every session, you're re-teaching the same expertise from scratch.</p>
+        </div>
+
+        <h2 id="insight">The Key Insight: Pre-Compiled Expert Judgment</h2>
+
+        <p>
+            Think about how human expertise works. A senior engineer doesn't reason from first principles every time they review code. They apply <strong>learned patterns</strong>: "this looks like a race condition," "this API design will cause versioning pain." Years of judgment, compressed into instant pattern-matching.
+        </p>
+
+        <p>
+            Skills do the same thing for LLM agents. A skill is a set of instructions &mdash; written in plain markdown &mdash; that encodes <em>how an expert thinks about a specific class of problem</em>. Not what tools to call. Not what API to hit. How to <strong>think</strong>.
+        </p>
+
+        <p>
+            Here's a concrete example. Without a skill, you'd prompt:
+        </p>
+
+        <pre><code><span class="comment">// Without a skill: re-teach everything every time</span>
+<span class="string">"Write a blog post about X. Use Inter font, dark theme,
+indigo accent. Lead with insights not definitions. Use
+analogies. Cut algorithm steps. Add a reading progress bar.
+Use the template from ifds-ide.html. Put images in /images/.
+Publish with git push..."</span>
+<span class="comment">// 500+ words of instructions, every single time</span></code></pre>
+
+        <p>
+            With a skill, you type <code>/write-blog</code> and all of that judgment loads automatically. The skill doesn't give the LLM new capabilities &mdash; it could always write HTML and run git. It gives the LLM your <strong>expert judgment</strong> about how to do it well.
+        </p>
+
+        <div class="highlight">
+            <p><strong>Core Insight:</strong> If the hard part is <em>getting access to data</em>, you need a tool. If the hard part is <em>judgment</em>, you need a skill. Skills don't add capability &mdash; they add expertise.</p>
+        </div>
+
+        <h2 id="architecture">The Architecture: Progressive Disclosure</h2>
+
+        <p>
+            The clever engineering behind skills is <strong>progressive disclosure</strong>. An LLM's context window is precious real estate. Loading every skill's full instructions at startup would waste thousands of tokens on irrelevant guidance. Instead, skills load in three levels:
+        </p>
+
+        <div class="arch-diagram">
+<span class="level-label">Level 1: Metadata</span>    <span class="arrow">&rarr;</span>  name + description only          <span class="desc"># always loaded (~20 tokens each)</span>
+<span class="level-label">Level 2: Instructions</span> <span class="arrow">&rarr;</span>  full SKILL.md body               <span class="desc"># loaded when triggered (~500-2000 tokens)</span>
+<span class="level-label">Level 3: Resources</span>    <span class="arrow">&rarr;</span>  templates, scripts, examples     <span class="desc"># loaded on demand during execution</span>
+        </div>
+
+        <p>
+            At startup, the LLM only sees a menu: "write-blog: Write Blog Post," "youtube: Download and Screenshot." Two tokens per skill. When you type <code>/write-blog</code> or the LLM matches your request against a skill description, the full instructions expand into context. Templates and scripts load only when the skill actually needs them.
+        </p>
+
+        <p>
+            This is the same pattern behind virtual memory: don't load what you don't need. And it means you can have dozens of skills without paying the context cost until one fires.
+        </p>
+
+        <p>
+            Each skill is just a folder with a <code>SKILL.md</code> file:
+        </p>
+
+        <pre><code><span class="comment">---</span>
+<span class="attr">name</span>: <span class="string">write-blog</span>
+<span class="attr">description</span>: <span class="string">Write a blog post for the site</span>
+<span class="attr">allowed-tools</span>: <span class="string">[Bash, Read, Write, WebSearch]</span>
+<span class="comment">---</span>
+
+<span class="comment"># Instructions</span>
+<span class="keyword">Lead with insights, not definitions.</span>
+<span class="keyword">Every concept needs a real example.</span>
+<span class="keyword">Use the template from ifds-ide.html...</span></code></pre>
+
+        <p>
+            The frontmatter controls permissions and execution model. The markdown body is the expert judgment. No API to implement. No server to deploy. Just markdown that anyone can write.
+        </p>
+
+        <h2 id="vs-tools">Skills vs. Tools: Complementary, Not Competitive</h2>
+
+        <p>
+            The most common confusion: "Aren't skills just another kind of tool?" No. They sit at completely different abstraction levels, and understanding the difference is the key to building effective agents.
+        </p>
+
+        <table class="comparison-table">
+            <tr>
+                <th>Dimension</th>
+                <th>Skills</th>
+                <th>MCP Tools</th>
+                <th>Function Calling</th>
+            </tr>
+            <tr>
+                <td class="dim-label">Provides</td>
+                <td><em>How to think</em> about a problem</td>
+                <td><em>What the agent can do</em></td>
+                <td>Structured API invocation</td>
+            </tr>
+            <tr>
+                <td class="dim-label">Abstraction</td>
+                <td>High (workflow orchestration)</td>
+                <td>Low (individual operations)</td>
+                <td>Low (single function)</td>
+            </tr>
+            <tr>
+                <td class="dim-label">Latency</td>
+                <td>Zero (local context injection)</td>
+                <td>Network overhead</td>
+                <td>Network overhead</td>
+            </tr>
+            <tr>
+                <td class="dim-label">Created by</td>
+                <td>Anyone (plain markdown)</td>
+                <td>Developers (server implementation)</td>
+                <td>Developers (API implementation)</td>
+            </tr>
+            <tr>
+                <td class="dim-label">Composability</td>
+                <td>Skills call tools and other skills</td>
+                <td>Tools are atomic</td>
+                <td>Functions are atomic</td>
+            </tr>
+        </table>
+
+        <p>
+            The relationship is <strong>layered</strong>: skills orchestrate, tools execute. Consider booking a pickleball court through browser automation. The MCP tools provide the capability: <code>navigate</code>, <code>click</code>, <code>fill</code>, <code>screenshot</code>. But the skill provides the judgment: which URL to navigate to, what sequence of clicks to follow, how to handle CAPTCHAs, when to retry.
+        </p>
+
+        <p>
+            Without the skill, you'd need to explain the entire booking workflow every time. Without the tools, the skill would be a set of instructions nobody could execute. They're two halves of the same system.
+        </p>
+
+        <pre><code><span class="comment">// The pattern that works in practice:</span>
+<span class="keyword">Skill</span> (orchestration + judgment)
+  <span class="arrow">&#x2514;</span><span class="arrow">&#x2500;</span> <span class="function">MCP Tool</span>: navigate to booking page
+  <span class="arrow">&#x2514;</span><span class="arrow">&#x2500;</span> <span class="function">MCP Tool</span>: fill login form
+  <span class="arrow">&#x2514;</span><span class="arrow">&#x2500;</span> <span class="function">MCP Tool</span>: click available time slot
+  <span class="arrow">&#x2514;</span><span class="arrow">&#x2500;</span> <span class="function">MCP Tool</span>: screenshot for confirmation
+  <span class="arrow">&#x2514;</span><span class="arrow">&#x2500;</span> <span class="keyword">Judgment</span>: retry if slot taken, try next best time</code></pre>
+
+        <h2 id="data">The Data: What Adoption Tells Us</h2>
+
+        <p>
+            The Claude Code ecosystem provides a natural experiment. Skills launched alongside MCP tools and function calling, letting us observe which extension mechanism developers gravitate toward for different problem classes.
+        </p>
+
+        <div class="stat-grid">
+            <div class="stat-card">
+                <span class="stat-number">277K+</span>
+                <span class="stat-label">Installs: Frontend Design Skill</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">70%</span>
+                <span class="stat-label">Fewer production bugs (TDD skills)</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">90%</span>
+                <span class="stat-label">Test coverage with testing skills</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">0ms</span>
+                <span class="stat-label">Latency (local context injection)</span>
+            </div>
+        </div>
+
+        <p>
+            The pattern in the data is clear: <strong>skills dominate for judgment-heavy tasks</strong>. The most-installed skills aren't wrappers around APIs &mdash; they're design philosophies (Frontend Design), quality methodologies (TDD), and workflow orchestrations (Remotion Video). The problems where "how to think about it" matters more than "how to access it."
+        </p>
+
+        <p>
+            Meanwhile, MCP tools dominate for capability-heavy tasks: database access, cloud provider APIs, browser automation. Nobody writes a skill to teach an LLM how to read a file &mdash; that's a capability problem, not a judgment problem.
+        </p>
+
+        <p>
+            The most effective agent setups use both. Developer surveys show that teams combining skills with MCP tools report spending more time finishing work than managing the tool &mdash; the skill handles the "what should I do?" question, and the tools handle the "how do I do it?" execution.
+        </p>
+
+        <h2 id="impact">Real-World Impact: Three Patterns</h2>
+
+        <p>
+            Looking at how skills are actually used in production, three patterns emerge:
+        </p>
+
+        <p>
+            <strong>Pattern 1: Content Generation with Taste.</strong> The Frontend Design skill (277K+ installs) doesn't teach Claude how to write CSS &mdash; it already knows that. It teaches Claude to <em>make design decisions</em>: prefer purposeful typography over decoration, use animation for meaning not flash, build consistent color systems. The skill encodes the judgment gap between "technically correct CSS" and "design that feels intentional."
+        </p>
+
+        <p>
+            <strong>Pattern 2: Multi-Step Workflow Orchestration.</strong> Booking a court, publishing a blog post, creating a video from a script. These tasks require stringing together many tool calls in the right order with the right error handling. The skill acts as a runbook: "do this, then this, if that fails try this instead." Without it, each step requires a separate prompt.
+        </p>
+
+        <p>
+            <strong>Pattern 3: Quality Methodology.</strong> TDD skills don't add testing tools &mdash; the LLM can already run <code>pytest</code>. They add the <em>discipline</em>: write the test first, watch it fail, write minimal code to pass, refactor. The 70% reduction in production bugs comes from judgment about <em>when and how</em> to test, not from the ability to test.
+        </p>
+
+        <div class="highlight">
+            <p><strong>The Recurring Theme:</strong> In every high-impact pattern, the skill's value isn't capability (the LLM already has that). It's expert judgment about a specific domain, encoded as reusable instructions.</p>
+        </div>
+
+        <h2 id="implications">Why This Matters Beyond Claude</h2>
+
+        <p>
+            The skills pattern points to something deeper about how we'll build AI systems. The current race is focused on capability: bigger models, more tools, more data. But the bottleneck in practice is often <strong>judgment</strong> &mdash; knowing which approach to take, not having the ability to take it.
+        </p>
+
+        <p>
+            This maps onto established concepts in AI research. ReAct (Yao et al., 2023) interleaves reasoning with action in a generic loop. Skills provide <strong>pre-compiled reasoning strategies</strong> for specific problem classes. Where ReAct says "think, then act," skills say "here's exactly <em>how</em> to think about this kind of problem."
+        </p>
+
+        <p>
+            The broader implication: as LLMs become more capable, the differentiating factor shifts from "what can the model do?" to "what does the model know about how to approach <em>this specific task</em>?" Skills are a low-tech, high-leverage answer to that question. Plain markdown. No fine-tuning. No API servers. Just expert judgment, made reusable.
+        </p>
+
+        <div class="takeaways">
+            <h2 id="takeaways">Key Takeaways</h2>
+            <ul>
+                <li><strong>Judgment vs. capability:</strong> LLMs already have broad capability. Skills fill the gap by encoding domain-specific expert judgment as reusable markdown instructions.</li>
+                <li><strong>Skills orchestrate, tools execute:</strong> Skills tell the agent <em>how to think</em>; MCP tools and function calling give it <em>what to do</em>. They're complementary layers, not alternatives.</li>
+                <li><strong>Progressive disclosure:</strong> Skills load in three levels (metadata &rarr; instructions &rarr; resources), paying context cost only when triggered &mdash; the same insight behind virtual memory.</li>
+                <li><strong>Data supports the split:</strong> High-adoption skills cluster around judgment-heavy tasks (design, methodology, workflows), while tools dominate capability-heavy tasks (APIs, databases, browsers).</li>
+                <li><strong>Democratized expertise:</strong> Anyone can write a skill in plain markdown &mdash; no API implementation, no server deployment. This makes expert judgment shareable and version-controllable.</li>
+            </ul>
+        </div>
+
+        <div class="references">
+            <h2>References</h2>
+            <ol>
+                <li>
+                    Anthropic. <em>Extend Claude with Skills</em> &mdash; Claude Code Documentation.
+                </li>
+                <li>
+                    Anthropic. <em>Agent Skills Overview</em> &mdash; Claude API Documentation.
+                </li>
+                <li>
+                    Yao et al. <em>ReAct: Synergizing Reasoning and Acting in Language Models</em>. ICLR 2023.
+                </li>
+                <li>
+                    Schick et al. <em>Toolformer: Language Models Can Teach Themselves to Use Tools</em>. NeurIPS 2023.
+                </li>
+                <li>
+                    Weng, Lilian. <em>LLM Powered Autonomous Agents</em>. Lil'Log, 2023.
+                </li>
+            </ol>
+        </div>
+    </main>
+
+    <footer>
+        <p>Built by <a href="index.html">Peng Liu</a> &middot; <a href="https://github.com/lpxz">GitHub</a></p>
+    </footer>
+
+    <script>
+        // Reading progress bar
+        window.addEventListener('scroll', () => {
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = (window.scrollY / docHeight) * 100;
+            document.getElementById('progress').style.width = scrolled + '%';
+        });
+
+        // Active TOC highlighting
+        const sections = document.querySelectorAll('h2[id]');
+        const tocLinks = document.querySelectorAll('.toc a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            tocLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
