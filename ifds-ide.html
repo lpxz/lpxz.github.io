@@ -4,292 +4,633 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IFDS: Turning Program Analysis into a Graph Problem - Peng Liu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.08);
+            --code-bg: #1e1e2e;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #e0e0e0;
-            min-height: 100vh;
-            line-height: 1.8;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-size: 17px;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 3rem 2rem;
+        /* Reading Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease;
         }
 
+        /* Navigation */
         nav {
-            margin-bottom: 2rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         nav a {
-            color: #4a9eff;
+            color: var(--text-muted);
             text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
         }
 
         nav a:hover {
-            text-decoration: underline;
+            color: var(--accent-light);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 8rem 2rem 4rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tag {
+            background: var(--accent-glow);
+            color: var(--accent-light);
+            padding: 0.4rem 1rem;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
         }
 
         h1 {
-            font-size: 2.2rem;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-            line-height: 1.3;
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
         }
 
-        .meta {
-            color: #8892b0;
-            margin-bottom: 2rem;
-            font-size: 0.95rem;
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Table of Contents */
+        .toc {
+            position: fixed;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            display: none;
+        }
+
+        @media (min-width: 1400px) {
+            .toc {
+                display: block;
+            }
+        }
+
+        .toc-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        .toc a {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0.5rem 0;
+            border-left: 2px solid var(--border);
+            padding-left: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .toc a:hover, .toc a.active {
+            color: var(--accent-light);
+            border-left-color: var(--accent);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 2rem 6rem;
         }
 
         h2 {
-            font-size: 1.4rem;
-            color: #ffffff;
-            margin-top: 2.5rem;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #4a9eff;
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 4rem 0 1.5rem;
+            letter-spacing: -0.01em;
+            position: relative;
+        }
+
+        h2::before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0.5rem;
+            width: 4px;
+            height: 1.5rem;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light));
+            border-radius: 2px;
         }
 
         p {
-            color: #a8b2d1;
-            margin-bottom: 1rem;
-            font-size: 1.05rem;
+            margin-bottom: 1.5rem;
         }
 
+        /* Links */
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--text-primary);
+        }
+
+        .container p a {
+            background: linear-gradient(180deg, transparent 60%, var(--accent-glow) 60%);
+            padding: 0 0.2rem;
+        }
+
+        .container p a:hover {
+            background: linear-gradient(180deg, transparent 60%, rgba(99, 102, 241, 0.3) 60%);
+        }
+
+        /* Lists */
         ul, ol {
-            color: #a8b2d1;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             padding-left: 1.5rem;
         }
 
         li {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+            padding-left: 0.5rem;
         }
 
+        li::marker {
+            color: var(--accent);
+        }
+
+        /* Code */
         code {
-            background: rgba(74, 158, 255, 0.15);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            background: var(--bg-tertiary);
             padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 0.9rem;
-            color: #64ffda;
+            border-radius: 6px;
+            color: var(--accent-light);
         }
 
         pre {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 1rem;
-            border-radius: 8px;
+            background: var(--code-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
             overflow-x: auto;
-            margin-bottom: 1rem;
-            border-left: 3px solid #4a9eff;
+            margin: 2rem 0;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        pre::before {
+            content: '';
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.5rem;
         }
 
         pre code {
             background: none;
             padding: 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
         }
 
-        a {
-            color: #4a9eff;
-            text-decoration: none;
-        }
+        /* Syntax Highlighting */
+        .keyword { color: #c678dd; }
+        .string { color: #98c379; }
+        .function { color: #61afef; }
+        .comment { color: #5c6370; font-style: italic; }
+        .type { color: #e5c07b; }
 
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .highlight {
-            background: rgba(74, 158, 255, 0.1);
-            border: 1px solid rgba(74, 158, 255, 0.3);
-            border-radius: 8px;
-            padding: 1rem;
-            margin: 1.5rem 0;
-        }
-
-        .highlight strong {
-            color: #ffffff;
-        }
-
-        .references {
-            margin-top: 3rem;
-            padding-top: 2rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .references h2 {
-            margin-top: 0;
-        }
-
-        .references ul {
-            list-style: decimal;
-        }
-
-        footer {
-            text-align: center;
-            color: #5a6a8a;
-            font-size: 0.85rem;
-            padding-top: 2rem;
-            margin-top: 3rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-
+        /* Images */
         .figure {
-            margin: 1.5rem 0;
-            text-align: center;
+            margin: 3rem -2rem;
+            position: relative;
+        }
+
+        @media (min-width: 900px) {
+            .figure {
+                margin: 3rem -4rem;
+            }
         }
 
         .figure img {
-            max-width: 100%;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 100%;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow:
+                0 4px 6px -1px rgba(0, 0, 0, 0.3),
+                0 20px 40px -10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .figure img:hover {
+            transform: translateY(-4px);
+            box-shadow:
+                0 8px 12px -2px rgba(0, 0, 0, 0.3),
+                0 30px 60px -15px rgba(0, 0, 0, 0.6);
         }
 
         .figure figcaption {
-            color: #8892b0;
+            text-align: center;
+            color: var(--text-muted);
             font-size: 0.9rem;
-            margin-top: 0.5rem;
+            margin-top: 1rem;
             font-style: italic;
         }
 
+        /* Highlight Box */
+        .highlight {
+            background: linear-gradient(135deg, var(--accent-glow), transparent);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .highlight::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light));
+        }
+
+        .highlight strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .highlight p {
+            margin: 0;
+        }
+
+        /* Key Takeaways */
+        .takeaways {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 3rem 0;
+            border: 1px solid var(--border);
+        }
+
+        .takeaways h2 {
+            margin-top: 0;
+        }
+
+        .takeaways h2::before {
+            display: none;
+        }
+
+        .takeaways ul {
+            margin-bottom: 0;
+        }
+
+        .takeaways li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .takeaways li:last-child {
+            border-bottom: none;
+        }
+
+        .takeaways strong {
+            color: var(--accent-light);
+        }
+
+        /* References */
+        .references {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .references h2::before {
+            display: none;
+        }
+
+        .references ol {
+            list-style: none;
+            padding-left: 0;
+            counter-reset: ref-counter;
+        }
+
+        .references li {
+            counter-increment: ref-counter;
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .references li::before {
+            content: counter(ref-counter);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 1.5rem;
+        }
+
+        .references li:last-child {
+            border-bottom: none;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--text-muted);
+        }
+
+        footer a:hover {
+            color: var(--accent-light);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero, .container > * {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        /* Responsive */
         @media (max-width: 600px) {
-            h1 {
-                font-size: 1.8rem;
+            body {
+                font-size: 16px;
+            }
+
+            .hero {
+                padding: 6rem 1.5rem 2rem;
+            }
+
+            .container {
+                padding: 0 1.5rem 4rem;
+            }
+
+            h2::before {
+                display: none;
+            }
+
+            .figure {
+                margin: 2rem -1.5rem;
+            }
+
+            pre {
+                border-radius: 0;
+                margin: 2rem -1.5rem;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <nav>
-            <a href="index.html">Home</a> &middot; <a href="blogs.html">Blogs</a>
-        </nav>
+    <div class="progress-bar" id="progress"></div>
 
-        <article>
-            <h1>IFDS: Turning Program Analysis into a Graph Problem</h1>
-            <p class="meta">March 2026 | Program Analysis</p>
+    <nav>
+        <a href="index.html" style="color: var(--text-primary); font-weight: 600;">Peng Liu</a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="blogs.html">Blog</a>
+            <a href="publications.html">Publications</a>
+        </div>
+    </nav>
 
-            <p>
-                How do security tools find bugs in million-line codebases? One powerful technique is IFDS, which turns the question "can bad data reach this dangerous function?" into "can I find a path in this graph?" This simple insight, from a 1995 paper by Reps, Horwitz, and Sagiv, powers tools like FlowDroid that find privacy leaks in Android apps.
-            </p>
+    <div class="toc">
+        <div class="toc-title">Contents</div>
+        <a href="#problem">The Problem</a>
+        <a href="#insight">Key Insight</a>
+        <a href="#flow">How Facts Flow</a>
+        <a href="#calls">Function Calls</a>
+        <a href="#ide">IDE Extension</a>
+        <a href="#impact">Real-World Impact</a>
+        <a href="#takeaways">Takeaways</a>
+    </div>
 
-            <h2>The Problem: Tracking Data Across Functions</h2>
+    <header class="hero">
+        <div class="hero-meta">
+            <span class="tag">Program Analysis</span>
+            <span class="date">March 2026</span>
+        </div>
+        <h1>IFDS: Turning Program Analysis into a Graph Problem</h1>
+        <p class="subtitle">
+            How do security tools find bugs in million-line codebases? IFDS turns "can bad data reach here?" into simple graph pathfinding. The key insight behind tools like FlowDroid.
+        </p>
+    </header>
 
-            <p>
-                Imagine you're checking if user input can reach a database query (a SQL injection risk). The tricky part? The data flows through multiple functions:
-            </p>
+    <main class="container">
+        <h2 id="problem">The Problem: Tracking Dangerous Data</h2>
 
-            <pre><code>void main() {
-    String input = getUserInput();  // dangerous!
-    String clean = sanitize(input); // now safe
-    query(clean);                   // is this safe?
+        <p>
+            Can attacker-controlled data reach your SQL query? Your file system? Your eval() call? This is <strong>taint analysis</strong>—and it's harder than it looks:
+        </p>
+
+        <pre><code><span class="keyword">void</span> <span class="function">handleRequest</span>(Request req) {
+    String user = req.<span class="function">getParam</span>(<span class="string">"user"</span>);  <span class="comment">// TAINTED!</span>
+    String safe = <span class="function">sanitize</span>(user);          <span class="comment">// cleaned</span>
+    String name = <span class="function">lookup</span>(safe);             <span class="comment">// safe? tainted?</span>
+    db.<span class="function">query</span>(<span class="string">"SELECT * FROM users WHERE name="</span> + name);
 }
 
-String sanitize(String s) {
-    return escape(s);  // removes dangerous characters
+String <span class="function">lookup</span>(String id) {
+    <span class="keyword">return</span> cache.<span class="function">get</span>(id);  <span class="comment">// does this propagate taint?</span>
 }</code></pre>
 
-            <p>
-                A naive approach might see <code>input</code> go into <code>sanitize()</code> and think the danger flows through. But <code>sanitize()</code> actually cleans the data! We need to track what each function <em>does</em> to the data, not just that data passed through it.
-            </p>
+        <p>
+            The challenge: <code>sanitize()</code> removes taint, but <code>lookup()</code> might propagate it. We need to track what each function <em>does</em> to tainted data—not just that data passed through it.
+        </p>
 
-            <h2>The Key Insight: Explode the Graph</h2>
+        <p>
+            And here's the tricky part: if <code>lookup()</code> is called from multiple places, we can't mix up which call had tainted input and which didn't.
+        </p>
 
-            <p>
-                Here's the clever trick: instead of asking "what facts are true at this line?", we build a graph where each node represents a <strong>specific fact at a specific line</strong>.
-            </p>
+        <h2 id="insight">The Key Insight: Explode the Graph</h2>
 
-            <figure class="figure">
-                <img src="images/ifds-exploded-supergraph.jpg" alt="Exploded Supergraph concept">
-                <figcaption>The "exploded" graph: each program point gets multiple nodes, one per fact we're tracking. (Source: Eric Bodden's DECA Course)</figcaption>
-            </figure>
+        <p>
+            Here's the clever trick: instead of asking "what facts are true at this line?", we build a graph where each node represents a <strong>specific fact at a specific line</strong>.
+        </p>
 
-            <p>
-                Think of it like this: instead of one maze with colored markers, we build a separate maze for each color. Now finding "does red reach the exit?" is just pathfinding.
-            </p>
+        <figure class="figure">
+            <img src="images/ifds-exploded-supergraph.jpg" alt="Exploded Supergraph concept">
+            <figcaption>The "exploded" graph: each program point gets multiple nodes, one per fact we're tracking.</figcaption>
+        </figure>
 
-            <div class="highlight">
-                <strong>The Core Idea:</strong> "Is variable X tainted at line 20?" becomes "Is there a path to node (line 20, X) in our graph?"
-            </div>
+        <p>
+            Think of it like this: instead of one maze with colored markers, we build a separate maze for each color. Now finding "does red reach the exit?" is just pathfinding.
+        </p>
 
-            <h2>How Facts Flow: Gen, Kill, Propagate</h2>
+        <div class="highlight">
+            <p><strong>The Core Idea:</strong> "Is variable X tainted at line 20?" becomes "Is there a path to node (line 20, X) in our graph?"</p>
+        </div>
 
-            <p>
-                The edges in our graph encode what happens to facts at each statement:
-            </p>
+        <h2 id="flow">How Facts Flow: Gen, Kill, Propagate</h2>
 
-            <ul>
-                <li><strong>Generate:</strong> <code>x = secret()</code> creates taint on X (new edge appears)</li>
-                <li><strong>Kill:</strong> <code>x = 0</code> removes taint on X (edge disappears)</li>
-                <li><strong>Propagate:</strong> <code>y = x</code> copies taint from X to Y (edge connects them)</li>
-            </ul>
+        <p>
+            The edges in our graph encode what happens to facts at each statement:
+        </p>
 
-            <figure class="figure">
-                <img src="images/ifds-taint-analysis.jpg" alt="Taint propagation example">
-                <figcaption>Taint flows from f to g through assignment: if f is tainted, g becomes tainted too. (Source: Eric Bodden's DECA Course)</figcaption>
-            </figure>
+        <ul>
+            <li><strong>Generate:</strong> <code>x = secret()</code> creates taint on X (new edge appears)</li>
+            <li><strong>Kill:</strong> <code>x = 0</code> removes taint on X (edge disappears)</li>
+            <li><strong>Propagate:</strong> <code>y = x</code> copies taint from X to Y (edge connects them)</li>
+        </ul>
 
-            <figure class="figure">
-                <img src="images/ifds-generating-values.jpg" alt="Generating new taint">
-                <figcaption>Calling secret() generates new taint. The "0" node (always reachable) lets us create facts unconditionally. (Source: Eric Bodden's DECA Course)</figcaption>
-            </figure>
+        <figure class="figure">
+            <img src="images/ifds-taint-analysis.jpg" alt="Taint propagation example">
+            <figcaption>Taint flows from f to g through assignment: if f is tainted, g becomes tainted too.</figcaption>
+        </figure>
 
-            <h2>Handling Function Calls Correctly</h2>
+        <figure class="figure">
+            <img src="images/ifds-generating-values.jpg" alt="Generating new taint">
+            <figcaption>Calling secret() generates new taint. The "0" node (always reachable) lets us create facts unconditionally.</figcaption>
+        </figure>
 
-            <p>
-                The hardest part is function calls. When <code>main()</code> calls <code>sanitize()</code>, we need to:
-            </p>
+        <h2 id="calls">Handling Function Calls Correctly</h2>
 
-            <ol>
-                <li>Pass facts from the call site to the function entry</li>
-                <li>Analyze what the function does</li>
-                <li>Bring the results back to the <em>right</em> call site</li>
-            </ol>
+        <p>
+            The hardest part is function calls. When <code>main()</code> calls <code>sanitize()</code>, we need to:
+        </p>
 
-            <p>
-                That last part is crucial. If <code>foo()</code> calls <code>sanitize()</code> and <code>bar()</code> also calls <code>sanitize()</code>, we can't mix up their results. IFDS handles this by only following paths that match calls with their returns—like matching parentheses.
-            </p>
+        <ol>
+            <li>Pass facts from the call site to the function entry</li>
+            <li>Analyze what the function does</li>
+            <li>Bring the results back to the <em>right</em> call site</li>
+        </ol>
 
-            <figure class="figure">
-                <img src="images/ifds-framework.jpg" alt="IFDS Framework overview">
-                <figcaption>IFDS works for many analysis problems: taint tracking, typestate, alias analysis, and more. (Source: Eric Bodden's DECA Course)</figcaption>
-            </figure>
+        <p>
+            That last part is crucial. If <code>foo()</code> calls <code>sanitize()</code> and <code>bar()</code> also calls <code>sanitize()</code>, we can't mix up their results. IFDS handles this by only following paths that match calls with their returns—like matching parentheses.
+        </p>
 
-            <h2>IDE: When You Need Values, Not Just Yes/No</h2>
+        <figure class="figure">
+            <img src="images/ifds-framework.jpg" alt="IFDS Framework overview">
+            <figcaption>IFDS works for many analysis problems: taint tracking, typestate, alias analysis, and more.</figcaption>
+        </figure>
 
-            <p>
-                IFDS answers yes/no questions: "Is X tainted?" But sometimes you need values: "What is X's value?"
-            </p>
+        <h2 id="ide">IDE: When You Need Values, Not Just Yes/No</h2>
 
-            <p>
-                IDE extends IFDS to track values. Instead of just knowing "X is constant," IDE tells you "X equals 42." It does this by attaching small functions to each edge that transform values as they flow.
-            </p>
+        <p>
+            IFDS answers yes/no questions: "Is X tainted?" But sometimes you need values: "What is X's value?"
+        </p>
 
-            <div class="highlight">
-                <strong>IFDS vs IDE:</strong> IFDS asks "Does this fact reach here?" IDE asks "What value does this fact have here?"
-            </div>
+        <p>
+            IDE extends IFDS to track values. Instead of just knowing "X is constant," IDE tells you "X equals 42." It does this by attaching small functions to each edge that transform values as they flow.
+        </p>
 
-            <h2>Real-World Impact: FlowDroid</h2>
+        <div class="highlight">
+            <p><strong>IFDS vs IDE:</strong> IFDS asks "Does this fact reach here?" IDE asks "What value does this fact have here?"</p>
+        </div>
 
-            <p>
-                <a href="https://blogs.uni-paderborn.de/sse/tools/flowdroid/">FlowDroid</a> uses IFDS to find privacy leaks in Android apps. It answers: "Can data from your contacts/location/photos reach the internet?"
-            </p>
+        <h2 id="impact">Real-World Impact: FlowDroid</h2>
 
-            <p>
-                FlowDroid achieves 93% recall and 86% precision—it finds most real leaks while keeping false alarms low. It powers security analysis for millions of Android apps.
-            </p>
+        <p>
+            <a href="https://blogs.uni-paderborn.de/sse/tools/flowdroid/">FlowDroid</a> uses IFDS to find privacy leaks in Android apps. It answers: "Can data from your contacts/location/photos reach the internet?"
+        </p>
 
-            <h2>Key Takeaways</h2>
+        <p>
+            FlowDroid achieves 93% recall and 86% precision—it finds most real leaks while keeping false alarms low. It powers security analysis for millions of Android apps.
+        </p>
 
+        <div class="takeaways">
+            <h2 id="takeaways">Key Takeaways</h2>
             <ul>
                 <li><strong>Graph reachability:</strong> IFDS turns "can bad data reach here?" into "is there a path in this graph?"</li>
                 <li><strong>Exploded graph:</strong> Each node is (program point, fact), so pathfinding gives us dataflow answers</li>
@@ -297,28 +638,58 @@ String sanitize(String s) {
                 <li><strong>IDE for values:</strong> When yes/no isn't enough, IDE tracks actual values through the program</li>
                 <li><strong>Practical impact:</strong> FlowDroid and similar tools use this to find real security bugs</li>
             </ul>
+        </div>
 
-            <div class="references">
-                <h2>References</h2>
-                <ul>
-                    <li>
-                        Reps, Horwitz, & Sagiv. <em>Precise Interprocedural Dataflow Analysis via Graph Reachability</em>. POPL 1995.
-                        [<a href="https://research.cs.wisc.edu/wpis/papers/popl95.pdf">PDF</a>]
-                    </li>
-                    <li>
-                        Arzt et al. <em>FlowDroid: Precise Taint Analysis for Android Apps</em>. PLDI 2014.
-                        [<a href="https://www.bodden.de/pubs/far+14flowdroid.pdf">PDF</a>]
-                    </li>
-                    <li>
-                        Video: <a href="https://www.youtube.com/watch?v=QkK79fT0TFU">Intro to IFDS</a> by Eric Bodden's group
-                    </li>
-                </ul>
-            </div>
-        </article>
+        <div class="references">
+            <h2>References</h2>
+            <ol>
+                <li>
+                    Reps, Horwitz, & Sagiv. <em>Precise Interprocedural Dataflow Analysis via Graph Reachability</em>. POPL 1995.
+                    <a href="https://research.cs.wisc.edu/wpis/papers/popl95.pdf">[PDF]</a>
+                </li>
+                <li>
+                    Arzt et al. <em>FlowDroid: Precise Taint Analysis for Android Apps</em>. PLDI 2014.
+                    <a href="https://www.bodden.de/pubs/far+14flowdroid.pdf">[PDF]</a>
+                </li>
+                <li>
+                    Video: <a href="https://www.youtube.com/watch?v=QkK79fT0TFU">Intro to IFDS</a> by Eric Bodden's group
+                </li>
+            </ol>
+        </div>
+    </main>
 
-        <footer>
-            Peng Liu | Hosted on GitHub Pages
-        </footer>
-    </div>
+    <footer>
+        <p>Built by <a href="index.html">Peng Liu</a> · <a href="https://github.com/lpxz">GitHub</a></p>
+    </footer>
+
+    <script>
+        // Reading progress bar
+        window.addEventListener('scroll', () => {
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = (window.scrollY / docHeight) * 100;
+            document.getElementById('progress').style.width = scrolled + '%';
+        });
+
+        // Active TOC highlighting
+        const sections = document.querySelectorAll('h2[id]');
+        const tocLinks = document.querySelectorAll('.toc a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            tocLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>
