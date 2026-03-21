@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - Peng Liu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        nav {
+            margin-bottom: 2rem;
+        }
+
+        nav a {
+            color: #4a9eff;
+            text-decoration: none;
+        }
+
+        nav a:hover {
+            text-decoration: underline;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #4a9eff;
+        }
+
+        .subtitle {
+            color: #8892b0;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .blog-list {
+            list-style: none;
+        }
+
+        .blog-list li {
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .blog-list li:hover {
+            background: rgba(74, 158, 255, 0.1);
+            border-color: rgba(74, 158, 255, 0.3);
+        }
+
+        .blog-list a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .blog-list a:hover {
+            color: #4a9eff;
+        }
+
+        .blog-list .date {
+            color: #4a9eff;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .blog-list .description {
+            color: #a8b2d1;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(74, 158, 255, 0.15);
+            color: #4a9eff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        footer {
+            text-align: center;
+            color: #5a6a8a;
+            font-size: 0.85rem;
+            padding-top: 2rem;
+            margin-top: 3rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            .blog-list li {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <a href="index.html">&larr; Back to Home</a>
+        </nav>
+
+        <h1>Blog</h1>
+        <p class="subtitle">Thoughts on program analysis, software engineering, and more.</p>
+
+        <ul class="blog-list">
+            <li>
+                <a href="ifds-ide.html">Understanding IFDS and IDE: Precise Interprocedural Dataflow Analysis</a>
+                <div class="date">March 2026</div>
+                <p class="description">
+                    A deep dive into the IFDS and IDE frameworks by Reps, Horwitz, and Sagiv. Learn how these algorithms reduce interprocedural dataflow analysis to graph reachability, enabling precise taint analysis, typestate checking, and more.
+                </p>
+                <span class="tag">Program Analysis</span>
+                <span class="tag">Static Analysis</span>
+                <span class="tag">IFDS</span>
+            </li>
+        </ul>
+
+        <footer>
+            Peng Liu | Hosted on GitHub Pages
+        </footer>
+    </div>
+</body>
+</html>
