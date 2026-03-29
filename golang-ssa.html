@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Go SSA: Understanding Static Single Assignment from Scratch - Peng Liu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.08);
+            --code-bg: #1e1e2e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-size: 17px;
+        }
+
+        /* Reading Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        nav a:hover {
+            color: var(--accent-light);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 8rem 2rem 4rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tag {
+            background: var(--accent-glow);
+            color: var(--accent-light);
+            padding: 0.4rem 1rem;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Table of Contents */
+        .toc {
+            position: fixed;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            display: none;
+        }
+
+        @media (min-width: 1400px) {
+            .toc {
+                display: block;
+            }
+        }
+
+        .toc-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        .toc a {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0.5rem 0;
+            border-left: 2px solid var(--border);
+            padding-left: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .toc a:hover, .toc a.active {
+            color: var(--accent-light);
+            border-left-color: var(--accent);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 2rem 6rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 4rem 0 1.5rem;
+            letter-spacing: -0.01em;
+            position: relative;
+        }
+
+        h2::before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0.5rem;
+            width: 4px;
+            height: 1.5rem;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light));
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 2.5rem 0 1rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Links */
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--text-primary);
+        }
+
+        .container p a {
+            background: linear-gradient(180deg, transparent 60%, var(--accent-glow) 60%);
+            padding: 0 0.2rem;
+        }
+
+        .container p a:hover {
+            background: linear-gradient(180deg, transparent 60%, rgba(99, 102, 241, 0.3) 60%);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.75rem;
+            padding-left: 0.5rem;
+        }
+
+        li::marker {
+            color: var(--accent);
+        }
+
+        /* Code */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            background: var(--bg-tertiary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            color: var(--accent-light);
+        }
+
+        pre {
+            background: var(--code-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 2rem 0;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        pre::before {
+            content: '';
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* Syntax Highlighting */
+        .keyword { color: #c678dd; }
+        .string { color: #98c379; }
+        .function { color: #61afef; }
+        .comment { color: #5c6370; font-style: italic; }
+        .type { color: #e5c07b; }
+
+        /* Highlight Box */
+        .highlight {
+            background: linear-gradient(135deg, var(--accent-glow), transparent);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .highlight::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light));
+        }
+
+        .highlight strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .highlight p {
+            margin: 0;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            font-size: 0.95rem;
+        }
+
+        .comparison-table th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            border-bottom: 2px solid var(--accent);
+            background: var(--bg-secondary);
+        }
+
+        .comparison-table td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comparison-table tr:hover td {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        /* Key Takeaways */
+        .takeaways {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 3rem 0;
+            border: 1px solid var(--border);
+        }
+
+        .takeaways h2 {
+            margin-top: 0;
+        }
+
+        .takeaways h2::before {
+            display: none;
+        }
+
+        .takeaways ul {
+            margin-bottom: 0;
+        }
+
+        .takeaways li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .takeaways li:last-child {
+            border-bottom: none;
+        }
+
+        .takeaways strong {
+            color: var(--accent-light);
+        }
+
+        /* References */
+        .references {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .references h2::before {
+            display: none;
+        }
+
+        .references ol {
+            list-style: none;
+            padding-left: 0;
+            counter-reset: ref-counter;
+        }
+
+        .references li {
+            counter-increment: ref-counter;
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .references li::before {
+            content: counter(ref-counter);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 1.5rem;
+        }
+
+        .references li:last-child {
+            border-bottom: none;
+        }
+
+        /* SSA Diagram */
+        .ssa-diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .ssa-diagram svg {
+            max-width: 100%;
+        }
+
+        .ssa-diagram figcaption {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            font-style: italic;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--text-muted);
+        }
+
+        footer a:hover {
+            color: var(--accent-light);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero, .container > * {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body {
+                font-size: 16px;
+            }
+
+            .hero {
+                padding: 6rem 1.5rem 2rem;
+            }
+
+            .container {
+                padding: 0 1.5rem 4rem;
+            }
+
+            h2::before {
+                display: none;
+            }
+
+            pre {
+                border-radius: 0;
+                margin: 2rem -1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progress"></div>
+
+    <nav>
+        <a href="index.html" style="color: var(--text-primary); font-weight: 600;">Peng Liu</a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="blogs.html">Blog</a>
+            <a href="publications.html">Publications</a>
+        </div>
+    </nav>
+
+    <div class="toc">
+        <div class="toc-title">Contents</div>
+        <a href="#problem">The Problem</a>
+        <a href="#ssa-idea">The SSA Idea</a>
+        <a href="#values">Values, Not Variables</a>
+        <a href="#instructions">Instructions vs Values</a>
+        <a href="#phi">Phi Nodes</a>
+        <a href="#loops">Loops in SSA</a>
+        <a href="#walking">Walking the Graph</a>
+        <a href="#code">Building SSA in Go</a>
+        <a href="#takeaways">Takeaways</a>
+    </div>
+
+    <header class="hero">
+        <div class="hero-meta">
+            <span class="tag">Program Analysis</span>
+            <span class="tag">Go</span>
+            <span class="date">March 2026</span>
+        </div>
+        <h1>Go SSA: Understanding Static Single Assignment from Scratch</h1>
+        <p class="subtitle">
+            SSA is the intermediate representation that powers compilers and static analysis tools. This post builds it up step by step &mdash; from the core idea, to phi nodes, to walking the graph in Go code.
+        </p>
+    </header>
+
+    <main class="container">
+        <h2 id="problem">The Problem: Mutable Variables Are Hard to Analyze</h2>
+
+        <p>
+            Consider this code:
+        </p>
+
+        <pre><code>x := <span class="string">1</span>
+x = x + <span class="string">2</span>
+x = x * <span class="string">3</span>
+fmt.<span class="function">Println</span>(x)</code></pre>
+
+        <p>
+            A compiler or analysis tool wants to answer: "What is the value of <code>x</code> at line 4?" But <code>x</code> has been assigned <strong>three times</strong>. You have to trace through every assignment to figure out which one matters. In a big program with loops and branches, this gets hard fast.
+        </p>
+
+        <h2 id="ssa-idea">The SSA Idea: Assign Once, Name Everything</h2>
+
+        <p>
+            <strong>Static Single Assignment</strong> says: give every assignment its own unique name. Rewrite the code above as:
+        </p>
+
+        <pre><code>t0 = <span class="string">1</span>
+t1 = t0 + <span class="string">2</span>
+t2 = t1 * <span class="string">3</span>
+<span class="function">print</span>(t2)</code></pre>
+
+        <p>
+            Now every name has <strong>exactly one definition</strong>. If you see <code>t1</code>, you instantly know it equals <code>t0 + 2</code>. No ambiguity. No tracing needed.
+        </p>
+
+        <div class="highlight">
+            <p><strong>The Rule:</strong> In SSA, every name is assigned exactly once. Need a new result? You get a new name. You never reuse an old one.</p>
+        </div>
+
+        <h2 id="values">Values, Not Variables</h2>
+
+        <p>
+            In normal Go, you think in terms of <strong>variables</strong> &mdash; named boxes that hold data and can be overwritten:
+        </p>
+
+        <pre><code>x := <span class="string">1</span>       <span class="comment">// x is a box, it holds 1</span>
+x = x + <span class="string">2</span>    <span class="comment">// same box, now holds 3</span></code></pre>
+
+        <p>
+            In SSA, each computation produces a <strong>value</strong>, and that value never changes:
+        </p>
+
+        <pre><code>t0 = <span class="string">1</span>         <span class="comment">// t0 is a value, it IS 1, forever</span>
+t1 = t0 + <span class="string">2</span>    <span class="comment">// t1 is a value, it IS 3, forever</span></code></pre>
+
+        <p>
+            You can think of each SSA value as an <strong>immutable box</strong> &mdash; once you put something in, it's sealed shut. Need a new result? Get a new box.
+        </p>
+
+        <p>
+            The key consequence: if someone tells you "look at box <code>t1</code>", you know <strong>exactly</strong> what's inside without tracing through the program. There's only one place it was ever defined.
+        </p>
+
+        <h2 id="instructions">Instructions vs Values: Two Roles, One Object</h2>
+
+        <p>
+            In Go's SSA, there are two core interfaces:
+        </p>
+
+        <ul>
+            <li><strong>Instruction</strong> &mdash; something that <em>does</em> something (a computation, a branch, a store)</li>
+            <li><strong>Value</strong> &mdash; something that <em>produces a result</em> (a named, typed, immutable result)</li>
+        </ul>
+
+        <p>
+            Many SSA objects are <strong>both</strong>. A <code>BinOp</code> (binary operation like <code>a + b</code>) is simultaneously an instruction (it performs addition) and a value (it produces a result you can reference). One Go struct, two roles.
+        </p>
+
+        <p>
+            But not everything is both:
+        </p>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Produces a result (Value)</th>
+                    <th>No result</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Does something (Instruction)</strong></td>
+                    <td><code>BinOp</code>, <code>Call</code>, <code>Phi</code></td>
+                    <td><code>Store</code>, <code>Return</code>, <code>Jump</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Just exists</strong></td>
+                    <td><code>Parameter</code>, <code>Const</code></td>
+                    <td>&mdash;</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>
+            <code>Store</code> writes to memory but produces no result you can name. <code>Parameter</code> is a function argument &mdash; it's a value, but no computation created it; it was given to you.
+        </p>
+
+        <h2 id="phi">Phi Nodes: Merging Branches</h2>
+
+        <p>
+            What happens when a value depends on which branch was taken?
+        </p>
+
+        <pre><code><span class="keyword">func</span> <span class="function">foo</span>(x <span class="type">int</span>) <span class="type">int</span> {
+    <span class="keyword">if</span> x > <span class="string">0</span> {
+        x = <span class="string">1</span>
+    } <span class="keyword">else</span> {
+        x = <span class="string">2</span>
+    }
+    <span class="keyword">return</span> x
+}</code></pre>
+
+        <p>
+            After the <code>if/else</code>, which value does <code>x</code> have? It depends on the path. In SSA, we can't just say <code>x</code> &mdash; every value has one definition. This is where <strong>phi nodes</strong> come in.
+        </p>
+
+        <pre><code><span class="comment">b0:</span>                        <span class="comment">// entry</span>
+    t0 = Parameter {x}
+    t1 = t0 > <span class="string">0</span>
+    <span class="keyword">if</span> t1 <span class="keyword">goto</span> b1 <span class="keyword">else</span> b2
+
+<span class="comment">b1:</span>                        <span class="comment">// then branch</span>
+    jump b3
+
+<span class="comment">b2:</span>                        <span class="comment">// else branch</span>
+    jump b3
+
+<span class="comment">b3:</span>                        <span class="comment">// after the if/else</span>
+    t2 = <span class="function">phi</span> [b1: <span class="string">1</span>, b2: <span class="string">2</span>]
+    <span class="keyword">return</span> t2</code></pre>
+
+        <p>
+            <code>t2</code> is a phi node. It means: if we arrived from <code>b1</code>, the value is <code>1</code>; if from <code>b2</code>, the value is <code>2</code>.
+        </p>
+
+        <div class="highlight">
+            <p><strong>Phi vs Ternary:</strong> A ternary (<code>x &gt; 0 ? 1 : 2</code>) evaluates a condition. A phi doesn't check any condition &mdash; it just looks at <strong>which block control flow came from</strong>. The condition was already evaluated earlier. The phi just merges the results after the fact.</p>
+        </div>
+
+        <p>
+            A phi node is both an instruction and a value. As an instruction, it picks from its inputs based on the incoming edge. As a value, it produces a result (<code>t2</code>) that other instructions can use.
+        </p>
+
+        <h2 id="loops">Loops: Phi Nodes Get Interesting</h2>
+
+        <pre><code><span class="keyword">func</span> <span class="function">sum</span>(n <span class="type">int</span>) <span class="type">int</span> {
+    s := <span class="string">0</span>
+    <span class="keyword">for</span> i := <span class="string">0</span>; i < n; i++ {
+        s = s + i
+    }
+    <span class="keyword">return</span> s
+}</code></pre>
+
+        <p>
+            In SSA:
+        </p>
+
+        <pre><code><span class="comment">b0:</span>                              <span class="comment">// entry</span>
+    t0 = Parameter {n}
+    jump b1
+
+<span class="comment">b1:</span>                              <span class="comment">// loop header</span>
+    t1 = <span class="function">phi</span> [b0: <span class="string">0</span>, b2: t3]        <span class="comment">// i: starts at 0, updated from b2</span>
+    t2 = <span class="function">phi</span> [b0: <span class="string">0</span>, b2: t4]        <span class="comment">// s: starts at 0, updated from b2</span>
+    t5 = t1 < t0                     <span class="comment">// i < n</span>
+    <span class="keyword">if</span> t5 <span class="keyword">goto</span> b2 <span class="keyword">else</span> b3
+
+<span class="comment">b2:</span>                              <span class="comment">// loop body</span>
+    t4 = t2 + t1                     <span class="comment">// s + i</span>
+    t3 = t1 + <span class="string">1</span>                      <span class="comment">// i + 1</span>
+    jump b1
+
+<span class="comment">b3:</span>                              <span class="comment">// after loop</span>
+    <span class="keyword">return</span> t2</code></pre>
+
+        <p>
+            Notice something odd in <code>b1</code>:
+        </p>
+
+        <pre><code>t1 = <span class="function">phi</span> [b0: <span class="string">0</span>, b2: t3]</code></pre>
+
+        <p>
+            <code>t3</code> is defined in <code>b2</code>, which comes <strong>after</strong> <code>b1</code> in the listing. The phi references a value that appears later in the text.
+        </p>
+
+        <p>
+            This is fine. Don't read SSA like sequential code. The phi declares a rule: "on each arrival to this block, pick the right value." On the first visit (from <code>b0</code>), <code>t1</code> is <code>0</code>. On later visits (from <code>b2</code>), <code>t1</code> is <code>t3</code> &mdash; which was computed in the previous loop iteration. By the time control flow arrives from <code>b2</code>, <code>t3</code> already exists.
+        </p>
+
+        <p>
+            This is how SSA handles mutable loop variables without any mutation.
+        </p>
+
+        <h2 id="walking">Walking the SSA Graph</h2>
+
+        <p>
+            Every SSA value has a <code>Referrers()</code> method that returns all instructions that use it. Every instruction has an <code>Operands()</code> method that returns the values it depends on. These two methods give you the entire graph.
+        </p>
+
+        <h3>Forward: Definition &rarr; Uses</h3>
+
+        <pre><code><span class="comment">// grab the first parameter (n)</span>
+param := fn.Params[<span class="string">0</span>]
+
+<span class="comment">// find everything that uses n</span>
+<span class="keyword">for</span> _, instr := <span class="keyword">range</span> *param.<span class="function">Referrers</span>() {
+    fmt.<span class="function">Printf</span>(<span class="string">"  used by: %s\n"</span>, instr)
+}
+<span class="comment">// Output: used by: t1 = i < n</span></code></pre>
+
+        <p>
+            One call to <code>Referrers()</code> and you have every use. You can chain it to walk multiple steps:
+        </p>
+
+        <pre><code><span class="keyword">func</span> <span class="function">walkUses</span>(v ssa.Value, depth <span class="type">int</span>) {
+    indent := strings.<span class="function">Repeat</span>(<span class="string">"  "</span>, depth)
+    <span class="keyword">for</span> _, instr := <span class="keyword">range</span> *v.<span class="function">Referrers</span>() {
+        fmt.<span class="function">Printf</span>(<span class="string">"%s%s\n"</span>, indent, instr)
+        <span class="comment">// if this instruction also produces a value, keep walking</span>
+        <span class="keyword">if</span> next, ok := instr.(ssa.Value); ok {
+            <span class="function">walkUses</span>(next, depth+<span class="string">1</span>)
+        }
+    }
+}</code></pre>
+
+        <h3>Backward: Use &rarr; Definitions</h3>
+
+        <pre><code><span class="keyword">for</span> _, b := <span class="keyword">range</span> fn.Blocks {
+    <span class="keyword">for</span> _, instr := <span class="keyword">range</span> b.Instrs {
+        <span class="keyword">for</span> _, op := <span class="keyword">range</span> instr.<span class="function">Operands</span>(<span class="keyword">nil</span>) {
+            <span class="keyword">if</span> *op != <span class="keyword">nil</span> {
+                fmt.<span class="function">Printf</span>(<span class="string">"%s depends on %s\n"</span>, instr, *op)
+            }
+        }
+    }
+}</code></pre>
+
+        <div class="highlight">
+            <p><strong>The whole picture:</strong> <code>Referrers()</code> goes forward (value &rarr; instructions that use it). <code>Operands()</code> goes backward (instruction &rarr; values it depends on).</p>
+        </div>
+
+        <h2 id="code">Building SSA in Go</h2>
+
+        <p>
+            Go provides SSA via <code>golang.org/x/tools/go/ssa</code>. Here's a complete program that parses Go source, builds SSA, and prints it:
+        </p>
+
+        <pre><code><span class="keyword">package</span> main
+
+<span class="keyword">import</span> (
+    <span class="string">"fmt"</span>
+    <span class="string">"go/ast"</span>
+    <span class="string">"go/parser"</span>
+    <span class="string">"go/token"</span>
+    <span class="string">"go/types"</span>
+    <span class="string">"os"</span>
+
+    <span class="string">"golang.org/x/tools/go/ssa"</span>
+)
+
+<span class="keyword">func</span> <span class="function">main</span>() {
+    src := <span class="string">`package example
+
+func Sum(n int) int {
+    s := 0
+    for i := 0; i < n; i++ {
+        s = s + i
+    }
+    return s
+}
+`</span>
+    <span class="comment">// 1. Parse</span>
+    fset := token.<span class="function">NewFileSet</span>()
+    f, _ := parser.<span class="function">ParseFile</span>(fset, <span class="string">"example.go"</span>, src, <span class="string">0</span>)
+
+    <span class="comment">// 2. Type-check</span>
+    conf := &amp;types.Config{}
+    info := &amp;types.Info{
+        Types: <span class="function">make</span>(<span class="keyword">map</span>[ast.Expr]types.TypeAndValue),
+        Defs:  <span class="function">make</span>(<span class="keyword">map</span>[*ast.Ident]types.Object),
+        Uses:  <span class="function">make</span>(<span class="keyword">map</span>[*ast.Ident]types.Object),
+    }
+    pkg, _ := conf.<span class="function">Check</span>(<span class="string">"example"</span>, fset, []*ast.File{f}, info)
+
+    <span class="comment">// 3. Build SSA</span>
+    prog := ssa.<span class="function">NewProgram</span>(fset, ssa.SanityCheckFunctions)
+    ssaPkg := prog.<span class="function">CreatePackage</span>(pkg, []*ast.File{f}, info, <span class="keyword">false</span>)
+    ssaPkg.<span class="function">Build</span>()
+
+    <span class="comment">// 4. Print</span>
+    fn := ssaPkg.<span class="function">Func</span>(<span class="string">"Sum"</span>)
+    fn.<span class="function">WriteTo</span>(os.Stdout)
+}</code></pre>
+
+        <p>
+            Three steps: parse, type-check, build SSA. Then you have the full graph to explore &mdash; blocks, instructions, values, and the edges between them.
+        </p>
+
+        <p>
+            There are two SSA implementations in Go. The one above (<code>golang.org/x/tools/go/ssa</code>) is the high-level, source-oriented one for building analysis tools. The compiler also has its own (<code>cmd/compile/internal/ssa</code>) &mdash; low-level and machine-oriented, for code generation. For program analysis, use the <code>x/tools</code> version.
+        </p>
+
+        <div class="takeaways">
+            <h2 id="takeaways">Key Takeaways</h2>
+            <ul>
+                <li><strong>One assignment per name:</strong> SSA eliminates mutable variables by giving every assignment a unique name, making analysis trivial</li>
+                <li><strong>Values are immutable boxes:</strong> Each SSA value is defined once and never changes &mdash; you always know what's inside</li>
+                <li><strong>Instruction vs Value:</strong> An instruction does something; a value produces a result. Many SSA objects (like <code>BinOp</code>) are both</li>
+                <li><strong>Phi nodes merge branches:</strong> When control flow joins, a phi picks the right value based on which block we came from &mdash; no condition, just edge selection</li>
+                <li><strong>Referrers() and Operands():</strong> These two methods let you walk the entire SSA graph forward (def &rarr; use) and backward (use &rarr; def)</li>
+            </ul>
+        </div>
+
+        <div class="references">
+            <h2>References</h2>
+            <ol>
+                <li>
+                    Go SSA package documentation. <a href="https://pkg.go.dev/golang.org/x/tools/go/ssa"><code>golang.org/x/tools/go/ssa</code></a>
+                </li>
+                <li>
+                    Cytron et al. <em>Efficiently Computing Static Single Assignment Form and the Control Dependence Graph</em>. ACM TOPLAS, 1991.
+                </li>
+                <li>
+                    Alan Donovan &amp; Brian Kernighan. <em>The Go Programming Language</em>. Chapter on tooling and analysis.
+                </li>
+            </ol>
+        </div>
+    </main>
+
+    <footer>
+        <p>Built by <a href="index.html">Peng Liu</a> &middot; <a href="https://github.com/lpxz">GitHub</a></p>
+    </footer>
+
+    <script>
+        // Reading progress bar
+        window.addEventListener('scroll', () => {
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = (window.scrollY / docHeight) * 100;
+            document.getElementById('progress').style.width = scrolled + '%';
+        });
+
+        // Active TOC highlighting
+        const sections = document.querySelectorAll('h2[id]');
+        const tocLinks = document.querySelectorAll('.toc a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            tocLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

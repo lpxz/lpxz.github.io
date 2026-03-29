@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSTEP Explained Simply - Peng Liu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.08);
+            --code-bg: #1e1e2e;
+            --virt-color: #6366f1;
+            --conc-color: #f59e0b;
+            --pers-color: #10b981;
+            --sec-color: #ef4444;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-size: 17px;
+        }
+
+        .progress-bar {
+            position: fixed; top: 0; left: 0; height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            width: 0%; z-index: 1000; transition: width 0.1s ease;
+        }
+
+        nav {
+            position: fixed; top: 0; left: 0; right: 0;
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        nav a { color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s ease; }
+        nav a:hover { color: var(--accent-light); }
+        .nav-links { display: flex; gap: 2rem; }
+
+        .hero {
+            padding: 8rem 2rem 3rem;
+            max-width: 800px; margin: 0 auto;
+        }
+        .hero-meta { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .tag { background: var(--accent-glow); color: var(--accent-light); padding: 0.4rem 1rem; border-radius: 100px; font-size: 0.8rem; font-weight: 500; }
+        .date { color: var(--text-muted); font-size: 0.9rem; }
+        h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 700; color: var(--text-primary); line-height: 1.2; margin-bottom: 1.5rem; letter-spacing: -0.02em; }
+        .subtitle { font-size: 1.15rem; color: var(--text-secondary); line-height: 1.6; }
+
+        .container { max-width: 720px; margin: 0 auto; padding: 0 2rem 6rem; }
+
+        /* Part Headers */
+        .part-header {
+            margin: 5rem 0 2rem;
+            padding: 2.5rem 2rem;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .part-header::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+        }
+        .part-header.virt { background: linear-gradient(135deg, rgba(99,102,241,0.1), transparent); border: 1px solid rgba(99,102,241,0.15); }
+        .part-header.virt::before { background: var(--virt-color); }
+        .part-header.conc { background: linear-gradient(135deg, rgba(245,158,11,0.1), transparent); border: 1px solid rgba(245,158,11,0.15); }
+        .part-header.conc::before { background: var(--conc-color); }
+        .part-header.pers { background: linear-gradient(135deg, rgba(16,185,129,0.1), transparent); border: 1px solid rgba(16,185,129,0.15); }
+        .part-header.pers::before { background: var(--pers-color); }
+        .part-header.sec { background: linear-gradient(135deg, rgba(239,68,68,0.1), transparent); border: 1px solid rgba(239,68,68,0.15); }
+        .part-header.sec::before { background: var(--sec-color); }
+        .part-number { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; }
+        .part-header.virt .part-number { color: var(--virt-color); }
+        .part-header.conc .part-number { color: var(--conc-color); }
+        .part-header.pers .part-number { color: var(--pers-color); }
+        .part-header.sec .part-number { color: var(--sec-color); }
+        .part-title { font-size: 1.6rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem; }
+        .part-desc { color: var(--text-secondary); font-size: 0.95rem; }
+
+        /* Chapter Cards */
+        .chapter {
+            margin: 2.5rem 0;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: border-color 0.3s;
+        }
+        .chapter:hover { border-color: rgba(99,102,241,0.3); }
+        .chapter-number { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 0.5rem; }
+        .chapter h3 { font-size: 1.3rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.75rem; line-height: 1.3; }
+        .chapter-problem { font-size: 0.9rem; color: var(--accent-light); font-weight: 500; margin-bottom: 1rem; font-style: italic; }
+        .chapter p { margin-bottom: 1rem; font-size: 0.95rem; line-height: 1.7; }
+        .chapter p:last-child { margin-bottom: 0; }
+
+        .analogy-box {
+            background: linear-gradient(135deg, var(--accent-glow), transparent);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 10px;
+            padding: 1.2rem 1.5rem;
+            margin: 1rem 0;
+            position: relative;
+        }
+        .analogy-box::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light)); border-radius: 2px;
+        }
+        .analogy-label { font-size: 0.75rem; font-weight: 600; color: var(--accent-light); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.4rem; }
+        .analogy-box p { margin: 0; font-size: 0.92rem; }
+
+        /* SVG Diagrams */
+        .diagram {
+            margin: 1.5rem -0.5rem;
+            text-align: center;
+        }
+        .diagram svg {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+        .diagram-caption {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+            font-style: italic;
+        }
+
+        /* Section Nav / TOC */
+        .section-nav {
+            position: sticky;
+            top: 4rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.2rem 1.5rem;
+            margin: 2rem 0 3rem;
+            z-index: 50;
+        }
+        .section-nav-title { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
+        .section-nav-links { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .section-nav-links a {
+            padding: 0.4rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 500;
+            text-decoration: none; transition: all 0.2s;
+            border: 1px solid var(--border); color: var(--text-secondary);
+        }
+        .section-nav-links a:hover { border-color: var(--accent); color: var(--accent-light); background: var(--accent-glow); }
+        .section-nav-links a.virt { border-color: rgba(99,102,241,0.3); }
+        .section-nav-links a.conc { border-color: rgba(245,158,11,0.3); }
+        .section-nav-links a.pers { border-color: rgba(16,185,129,0.3); }
+        .section-nav-links a.sec { border-color: rgba(239,68,68,0.3); }
+
+        h2 {
+            font-size: 1.75rem; font-weight: 600; color: var(--text-primary);
+            margin: 4rem 0 1.5rem; letter-spacing: -0.01em; position: relative;
+        }
+        h2::before {
+            content: ''; position: absolute; left: -2rem; top: 0.5rem;
+            width: 4px; height: 1.5rem;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light));
+            border-radius: 2px;
+        }
+
+        a { color: var(--accent-light); text-decoration: none; transition: all 0.2s ease; }
+        a:hover { color: var(--text-primary); }
+
+        code {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.88em;
+            background: var(--bg-tertiary); padding: 0.2rem 0.5rem;
+            border-radius: 6px; color: var(--accent-light);
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, var(--accent-glow), transparent);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px; padding: 1.5rem 2rem; margin: 2rem 0;
+            position: relative; overflow: hidden;
+        }
+        .highlight::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--accent), var(--accent-light)); }
+        .highlight strong { color: var(--text-primary); }
+        .highlight p { margin: 0; }
+
+        .takeaways {
+            background: var(--bg-secondary); border-radius: 16px; padding: 2rem;
+            margin: 3rem 0; border: 1px solid var(--border);
+        }
+        .takeaways h2 { margin-top: 0; }
+        .takeaways h2::before { display: none; }
+        .takeaways ul { list-style: none; padding: 0; margin: 0; }
+        .takeaways li { padding: 0.75rem 0; border-bottom: 1px solid var(--border); padding-left: 0; }
+        .takeaways li:last-child { border-bottom: none; }
+        .takeaways strong { color: var(--accent-light); }
+
+        .references { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+        .references h2::before { display: none; }
+        .references ol { list-style: none; padding-left: 0; counter-reset: ref-counter; }
+        .references li { counter-increment: ref-counter; display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--border); }
+        .references li::before { content: counter(ref-counter); color: var(--accent); font-weight: 600; font-size: 0.9rem; min-width: 1.5rem; }
+        .references li:last-child { border-bottom: none; }
+
+        footer { text-align: center; padding: 3rem 2rem; color: var(--text-muted); font-size: 0.9rem; border-top: 1px solid var(--border); margin-top: 4rem; }
+        footer a { color: var(--text-muted); }
+        footer a:hover { color: var(--accent-light); }
+
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .hero, .container > * { animation: fadeInUp 0.6s ease-out forwards; }
+
+        @media (max-width: 600px) {
+            body { font-size: 16px; }
+            .hero { padding: 6rem 1.5rem 2rem; }
+            .container { padding: 0 1.5rem 4rem; }
+            h2::before { display: none; }
+            .chapter { padding: 1.5rem; }
+            .part-header { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progress"></div>
+
+    <nav>
+        <a href="index.html" style="color: var(--text-primary); font-weight: 600;">Peng Liu</a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="blogs.html">Blog</a>
+            <a href="publications.html">Publications</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-meta">
+            <span class="tag">Operating Systems</span>
+            <span class="tag" style="background: rgba(16,185,129,0.15); color: #10b981;">Linux Kernel</span>
+            <span class="date">March 2026</span>
+        </div>
+        <h1>Operating Systems: Three Easy Pieces &mdash; Explained Simply</h1>
+        <p class="subtitle">
+            The classic OSTEP textbook by Remzi &amp; Andrea Arpaci-Dusseau, broken down chapter by chapter. No jargon, no complexity analysis. Just the key ideas, explained like you're in high school.
+        </p>
+    </header>
+
+    <main class="container">
+
+        <!-- Quick Navigation -->
+        <div class="section-nav">
+            <div class="section-nav-title">Jump to Section</div>
+            <div class="section-nav-links">
+                <a href="#intro" class="virt">Introduction</a>
+                <a href="#cpu" class="virt">CPU Virtualization</a>
+                <a href="#memory" class="virt">Memory Virtualization</a>
+                <a href="#concurrency" class="conc">Concurrency</a>
+                <a href="#persistence" class="pers">Persistence</a>
+                <a href="#security" class="sec">Security</a>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- PART 0: INTRODUCTION -->
+        <!-- ============================================================ -->
+        <div class="part-header virt" id="intro">
+            <div class="part-number">Prelude</div>
+            <div class="part-title">Introduction</div>
+            <div class="part-desc">What is an operating system, and why should you care?</div>
+        </div>
+
+        <div class="chapter">
+            <div class="chapter-number">Chapter 1</div>
+            <h3>The Invisible Manager Behind Your Computer</h3>
+            <p class="chapter-problem">How does a computer let you run a browser, music player, and game all at the same time with just one processor?</p>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="200" rx="12" fill="#1a1a24"/>
+                    <!-- Programs -->
+                    <rect x="40" y="30" width="100" height="40" rx="8" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="90" y="55" fill="#818cf8" font-size="12" text-anchor="middle" font-family="Inter">Browser</text>
+                    <rect x="160" y="30" width="100" height="40" rx="8" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="210" y="55" fill="#818cf8" font-size="12" text-anchor="middle" font-family="Inter">Music</text>
+                    <rect x="280" y="30" width="100" height="40" rx="8" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="330" y="55" fill="#818cf8" font-size="12" text-anchor="middle" font-family="Inter">Game</text>
+                    <rect x="400" y="30" width="70" height="40" rx="8" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="435" y="55" fill="#818cf8" font-size="12" text-anchor="middle" font-family="Inter">...</text>
+                    <!-- OS Layer -->
+                    <rect x="40" y="100" width="430" height="45" rx="8" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1.5"/>
+                    <text x="255" y="128" fill="#f59e0b" font-size="14" font-weight="600" text-anchor="middle" font-family="Inter">Operating System (the invisible manager)</text>
+                    <!-- Hardware -->
+                    <rect x="40" y="170" width="130" height="30" rx="6" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1"/>
+                    <text x="105" y="190" fill="#10b981" font-size="11" text-anchor="middle" font-family="Inter">CPU</text>
+                    <rect x="185" y="170" width="130" height="30" rx="6" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1"/>
+                    <text x="250" y="190" fill="#10b981" font-size="11" text-anchor="middle" font-family="Inter">Memory</text>
+                    <rect x="330" y="170" width="140" height="30" rx="6" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1"/>
+                    <text x="400" y="190" fill="#10b981" font-size="11" text-anchor="middle" font-family="Inter">Disk</text>
+                    <!-- Arrows -->
+                    <line x1="90" y1="70" x2="90" y2="100" stroke="#606070" stroke-width="1" stroke-dasharray="4"/>
+                    <line x1="210" y1="70" x2="210" y2="100" stroke="#606070" stroke-width="1" stroke-dasharray="4"/>
+                    <line x1="330" y1="70" x2="330" y2="100" stroke="#606070" stroke-width="1" stroke-dasharray="4"/>
+                    <line x1="255" y1="145" x2="255" y2="170" stroke="#606070" stroke-width="1" stroke-dasharray="4"/>
+                </svg>
+                <div class="diagram-caption">Programs think they own the hardware. The OS secretly shares it among everyone.</div>
+            </div>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>The OS is like the manager of a busy restaurant. You never see them cooking or serving, but they coordinate everything so every customer (program) gets served. Through <strong>virtualization</strong>, each program thinks it has the entire computer to itself.</p>
+            </div>
+
+            <p>The OS has three big jobs: (1) <strong>virtualizing</strong> hardware so programs are easy to write, (2) handling <strong>concurrency</strong> when multiple things happen at once, and (3) storing data <strong>persistently</strong> so your files survive a reboot. It's the invisible referee, traffic cop, and librarian of your computer, all rolled into one.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- PART 1: CPU VIRTUALIZATION -->
+        <!-- ============================================================ -->
+        <div class="part-header virt" id="cpu">
+            <div class="part-number">Part I</div>
+            <div class="part-title">CPU Virtualization</div>
+            <div class="part-desc">How one CPU pretends to be many, and who gets to run next.</div>
+        </div>
+
+        <!-- Ch2: Processes -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 2</div>
+            <h3>Bringing Programs to Life: The Process</h3>
+            <p class="chapter-problem">A program on your hard drive is just a file. How does the OS turn it into a living, running thing?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Think of a <strong>recipe</strong> (program) versus actually <strong>cooking a dish</strong> (process). The recipe on paper does nothing. But when a chef starts following it -- gathering ingredients, chopping, stirring -- that's a process. A process is a running program with its own memory, registers, and a current step it's on.</p>
+            </div>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="140" rx="12" fill="#1a1a24"/>
+                    <rect x="40" y="40" width="100" height="35" rx="6" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1.5"/>
+                    <text x="90" y="62" fill="#10b981" font-size="12" font-weight="600" text-anchor="middle" font-family="Inter">Running</text>
+                    <rect x="200" y="40" width="100" height="35" rx="6" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="1.5"/>
+                    <text x="250" y="62" fill="#f59e0b" font-size="12" font-weight="600" text-anchor="middle" font-family="Inter">Ready</text>
+                    <rect x="360" y="40" width="100" height="35" rx="6" fill="rgba(239,68,68,0.2)" stroke="#ef4444" stroke-width="1.5"/>
+                    <text x="410" y="62" fill="#ef4444" font-size="12" font-weight="600" text-anchor="middle" font-family="Inter">Blocked</text>
+                    <!-- Arrows -->
+                    <path d="M140 50 L195 50" stroke="#606070" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
+                    <path d="M195 65 L145 65" stroke="#606070" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
+                    <path d="M300 57 L355 57" stroke="#606070" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
+                    <path d="M410 75 L410 100 L250 100 L250 80" stroke="#606070" stroke-width="1.5" fill="none" marker-end="url(#arrow1)"/>
+                    <!-- Labels -->
+                    <text x="167" y="45" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">deschedule</text>
+                    <text x="167" y="80" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">schedule</text>
+                    <text x="328" y="50" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">I/O wait</text>
+                    <text x="330" y="115" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">I/O complete</text>
+                    <defs><marker id="arrow1" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#606070"/></marker></defs>
+                </svg>
+                <div class="diagram-caption">The three states of a process: Running, Ready, or Blocked.</div>
+            </div>
+
+            <p>The OS keeps a list of all processes, noting each one's state. When a process does something slow like reading a file, it becomes <strong>blocked</strong> and the OS hands the CPU to someone else -- no time wasted. The OS tracks each process's full state in a <strong>Process Control Block</strong> -- like a bookmark that lets it pause a process and perfectly resume it later.</p>
+        </div>
+
+        <!-- Ch3: Process API -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 3</div>
+            <h3>Fork, Exec, and Wait: The UNIX Family Recipe</h3>
+            <p class="chapter-problem">How do you actually create and control processes in a real operating system?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Creating a process in UNIX is like biological reproduction. <code>fork()</code> creates a <strong>child</strong> that's an almost identical clone of the parent -- like a cell dividing in two. Then <code>exec()</code> transforms the child into a completely different program, and <code>wait()</code> lets the parent pause until the child finishes.</p>
+            </div>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="160" rx="12" fill="#1a1a24"/>
+                    <!-- Shell -->
+                    <rect x="30" y="50" width="80" height="35" rx="6" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="70" y="72" fill="#818cf8" font-size="11" font-weight="600" text-anchor="middle" font-family="Inter">Shell</text>
+                    <!-- fork arrow -->
+                    <path d="M110 67 L165 45" stroke="#f59e0b" stroke-width="1.5" fill="none" marker-end="url(#arrow2)"/>
+                    <path d="M110 67 L165 95" stroke="#f59e0b" stroke-width="1.5" fill="none" marker-end="url(#arrow2)"/>
+                    <text x="130" y="40" fill="#f59e0b" font-size="10" font-family="Inter">fork()</text>
+                    <!-- Parent -->
+                    <rect x="170" y="80" width="80" height="35" rx="6" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="210" y="102" fill="#818cf8" font-size="10" text-anchor="middle" font-family="Inter">Parent</text>
+                    <text x="210" y="132" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">calls wait()</text>
+                    <!-- Child -->
+                    <rect x="170" y="28" width="80" height="35" rx="6" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="1.5"/>
+                    <text x="210" y="50" fill="#f59e0b" font-size="10" text-anchor="middle" font-family="Inter">Child</text>
+                    <!-- exec arrow -->
+                    <path d="M250 45 L310 45" stroke="#10b981" stroke-width="1.5" fill="none" marker-end="url(#arrow2)"/>
+                    <text x="280" y="38" fill="#10b981" font-size="10" font-family="Inter">exec()</text>
+                    <!-- ls -->
+                    <rect x="315" y="28" width="70" height="35" rx="6" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1.5"/>
+                    <text x="350" y="50" fill="#10b981" font-size="11" font-weight="600" text-anchor="middle" font-family="Inter">ls</text>
+                    <!-- done -->
+                    <path d="M385 55 L420 80 L260 97" stroke="#606070" stroke-width="1" stroke-dasharray="4" fill="none" marker-end="url(#arrow2)"/>
+                    <text x="390" y="75" fill="#606070" font-size="9" font-family="Inter">exit</text>
+                    <defs><marker id="arrow2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#606070"/></marker></defs>
+                </svg>
+                <div class="diagram-caption">When you type "ls": shell forks, child exec's into ls, parent waits.</div>
+            </div>
+
+            <p>This fork-then-exec design is brilliant because between the two steps, the shell can set up things like redirecting output to a file -- which is exactly how <code>ls > output.txt</code> works.</p>
+        </div>
+
+        <!-- Ch4: Limited Direct Execution -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 4</div>
+            <h3>Baby-Proofing the CPU</h3>
+            <p class="chapter-problem">If you let a program run directly on the CPU (for speed), how do you stop it from doing dangerous things or hogging the processor forever?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>It's like baby-proofing a room. Before you let the toddler (program) roam free, you lock the cabinets (restrict dangerous operations) and cover the outlets (block direct hardware access). Then you set a <strong>kitchen timer</strong> (hardware timer interrupt) so you check back regularly.</p>
+            </div>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 140" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="120" rx="12" fill="#1a1a24"/>
+                    <!-- User mode -->
+                    <rect x="30" y="30" width="200" height="40" rx="6" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="130" y="55" fill="#f59e0b" font-size="12" font-weight="600" text-anchor="middle" font-family="Inter">User Mode (restricted)</text>
+                    <!-- Kernel mode -->
+                    <rect x="270" y="30" width="200" height="40" rx="6" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1"/>
+                    <text x="370" y="55" fill="#ef4444" font-size="12" font-weight="600" text-anchor="middle" font-family="Inter">Kernel Mode (full power)</text>
+                    <!-- Arrow -->
+                    <path d="M230 45 L265 45" stroke="#818cf8" stroke-width="2" fill="none" marker-end="url(#arrow3)"/>
+                    <text x="248" y="38" fill="#818cf8" font-size="9" text-anchor="middle" font-family="Inter">trap</text>
+                    <path d="M270 60 L235 60" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrow3)"/>
+                    <text x="252" y="75" fill="#10b981" font-size="9" text-anchor="middle" font-family="Inter">return</text>
+                    <!-- Timer -->
+                    <rect x="180" y="90" width="140" height="25" rx="5" fill="rgba(99,102,241,0.15)" stroke="#6366f1" stroke-width="1"/>
+                    <text x="250" y="107" fill="#818cf8" font-size="10" text-anchor="middle" font-family="Inter">Timer Interrupt</text>
+                    <defs><marker id="arrow3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#818cf8"/></marker></defs>
+                </svg>
+                <div class="diagram-caption">Programs run fast in user mode, but must "trap" into kernel mode for dangerous operations.</div>
+            </div>
+
+            <p>A hardware timer fires every few milliseconds, interrupting whatever program is running and giving the OS a chance to decide: should I let this keep running, or switch to another? This is called a <strong>context switch</strong>, and it's how the OS stays in charge.</p>
+        </div>
+
+        <!-- Ch5: Scheduling Intro -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 5</div>
+            <h3>Who Gets to Go Next? CPU Scheduling</h3>
+            <p class="chapter-problem">When multiple programs want the CPU, which one should run first?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>It's like managing checkout lines at a grocery store. <strong>FIFO</strong> seems fair -- whoever arrives first goes first. But if someone with a full cart is ahead of you and you only have one item, you wait forever (the <em>convoy effect</em>). <strong>Shortest Job First</strong> is like an express lane. <strong>Round Robin</strong> gives everyone 30 seconds at the register before rotating.</p>
+            </div>
+
+            <p>Three jobs arrive: A takes 100s, B and C each take 10s. With FIFO (A first), average wait is 110s. With SJF (B and C first), it drops to 50s. But SJF is terrible for response time. Round Robin fixes response time but makes turnaround worse. <strong>You can't optimize for everything at once.</strong></p>
+        </div>
+
+        <!-- Ch6: MLFQ -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 6</div>
+            <h3>The Smart Line That Watches You: MLFQ</h3>
+            <p class="chapter-problem">The best schedulers need to know how long each job takes -- but the OS has no crystal ball. How do you schedule without knowing the future?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Imagine a theme park with VIP, regular, and economy lines. Every new visitor starts in VIP. If they take a quick ride and leave, great. But if they keep riding for a long time, they get moved down. <strong>The system learns from your behavior</strong> instead of asking you upfront.</p>
+            </div>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="180" rx="12" fill="#1a1a24"/>
+                    <!-- Queues -->
+                    <rect x="40" y="30" width="420" height="35" rx="6" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1"/>
+                    <text x="80" y="52" fill="#10b981" font-size="11" font-weight="600" font-family="Inter">Q3 (Highest)</text>
+                    <rect x="280" y="37" width="50" height="22" rx="4" fill="rgba(16,185,129,0.3)"/><text x="305" y="53" fill="#10b981" font-size="10" text-anchor="middle" font-family="Inter">A</text>
+                    <rect x="340" y="37" width="50" height="22" rx="4" fill="rgba(16,185,129,0.3)"/><text x="365" y="53" fill="#10b981" font-size="10" text-anchor="middle" font-family="Inter">B</text>
+
+                    <rect x="40" y="80" width="420" height="35" rx="6" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="80" y="102" fill="#f59e0b" font-size="11" font-weight="600" font-family="Inter">Q2 (Medium)</text>
+                    <rect x="280" y="87" width="50" height="22" rx="4" fill="rgba(245,158,11,0.3)"/><text x="305" y="103" fill="#f59e0b" font-size="10" text-anchor="middle" font-family="Inter">C</text>
+
+                    <rect x="40" y="130" width="420" height="35" rx="6" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="1"/>
+                    <text x="80" y="152" fill="#ef4444" font-size="11" font-weight="600" font-family="Inter">Q1 (Lowest)</text>
+                    <rect x="280" y="137" width="50" height="22" rx="4" fill="rgba(239,68,68,0.3)"/><text x="305" y="153" fill="#ef4444" font-size="10" text-anchor="middle" font-family="Inter">D</text>
+
+                    <!-- Demote arrow -->
+                    <path d="M420 55 L440 55 L440 90 L425 90" stroke="#606070" stroke-width="1.5" fill="none" marker-end="url(#arrow4)" stroke-dasharray="4"/>
+                    <text x="455" y="75" fill="#606070" font-size="8" font-family="Inter">demote</text>
+                    <defs><marker id="arrow4" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><path d="M8,0 L0,3 L8,6" fill="#606070"/></marker></defs>
+                </svg>
+                <div class="diagram-caption">MLFQ: new jobs start at the top. CPU hogs get demoted. Interactive jobs stay high.</div>
+            </div>
+
+            <p>To prevent starvation, the system periodically boosts everyone back to the top. MLFQ powers Windows, macOS, and many Linux systems.</p>
+        </div>
+
+        <!-- Ch7: Lottery Scheduling -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 7</div>
+            <h3>The Lottery Ticket Approach: Proportional Share</h3>
+            <p class="chapter-problem">Instead of fastest-first, what if you want to guarantee each process gets a fair percentage of the CPU?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Imagine a raffle. You have 75 tickets and your friend has 25. Every second, a winning ticket is drawn and the winner gets the CPU. Over time, you win about 75% of the draws. Simple, random, and surprisingly fair.</p>
+            </div>
+
+            <p>Linux's <strong>Completely Fair Scheduler (CFS)</strong> takes a similar approach: it always runs the process that has received the least CPU time so far, using an efficient red-black tree to find it instantly, even with thousands of processes.</p>
+        </div>
+
+        <!-- Ch8: Multiprocessor Scheduling -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 8</div>
+            <h3>Managing a Team of Chefs: Multi-CPU Scheduling</h3>
+            <p class="chapter-problem">Modern computers have multiple CPU cores. How do you divide work across them without chaos?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Imagine a restaurant with four chefs sharing one order board (<strong>single-queue</strong>). They crowd around it, and keep switching stations. A better idea: give each chef their own order board (<strong>multi-queue</strong>). The catch? Sometimes one chef is overwhelmed while another is idle -- so occasionally, a chef <strong>steals</strong> an order from a busy colleague.</p>
+            </div>
+
+            <p>Multi-queue scheduling keeps jobs on the same CPU for better <strong>cache affinity</strong>, with <strong>work stealing</strong> to balance load. There's no single perfect answer -- Linux has tried multiple approaches (O(1), CFS, BFS).</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- PART 2: MEMORY VIRTUALIZATION -->
+        <!-- ============================================================ -->
+        <div class="part-header virt" id="memory">
+            <div class="part-number">Part II</div>
+            <div class="part-title">Memory Virtualization</div>
+            <div class="part-desc">How every program believes it has all the memory in the world.</div>
+        </div>
+
+        <!-- Ch9: Address Spaces -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 9</div>
+            <h3>The Illusion of Your Own Memory Kingdom</h3>
+            <p class="chapter-problem">How can multiple programs run at the same time without stepping on each other's memory?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>You and your friends all live in the same apartment building, but each of you believes you <strong>own the entire building</strong>. The OS creates this illusion using an <strong>address space</strong> -- each program thinks it has memory all to itself, starting from address 0.</p>
+            </div>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="180" rx="12" fill="#1a1a24"/>
+                    <!-- Address space -->
+                    <rect x="180" y="25" width="140" height="160" rx="8" fill="none" stroke="#6366f1" stroke-width="1.5"/>
+                    <text x="250" y="18" fill="#818cf8" font-size="10" text-anchor="middle" font-family="Inter">Virtual Address Space</text>
+                    <rect x="185" y="30" width="130" height="30" rx="4" fill="rgba(99,102,241,0.2)"/>
+                    <text x="250" y="50" fill="#818cf8" font-size="11" text-anchor="middle" font-family="Inter">Code</text>
+                    <rect x="185" y="65" width="130" height="35" rx="4" fill="rgba(16,185,129,0.2)"/>
+                    <text x="250" y="87" fill="#10b981" font-size="11" text-anchor="middle" font-family="Inter">Heap (grows down)</text>
+                    <text x="250" y="122" fill="#606070" font-size="10" text-anchor="middle" font-family="Inter">(free space)</text>
+                    <rect x="185" y="145" width="130" height="35" rx="4" fill="rgba(245,158,11,0.2)"/>
+                    <text x="250" y="167" fill="#f59e0b" font-size="11" text-anchor="middle" font-family="Inter">Stack (grows up)</text>
+                    <!-- Labels -->
+                    <text x="170" y="45" fill="#606070" font-size="9" text-anchor="end" font-family="Inter">0x0000</text>
+                    <text x="170" y="178" fill="#606070" font-size="9" text-anchor="end" font-family="Inter">0xFFFF</text>
+                </svg>
+                <div class="diagram-caption">Each program sees code at the top, heap growing down, stack growing up.</div>
+            </div>
+
+            <p>The OS pursues three goals: <strong>transparency</strong> (programs don't know memory is shared), <strong>efficiency</strong> (it shouldn't slow things down), and <strong>protection</strong> (one program can't mess with another's memory).</p>
+        </div>
+
+        <!-- Ch10: Memory API -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 10</div>
+            <h3>Memory's Drive-Thru Menu</h3>
+            <p class="chapter-problem">How do programmers ask for memory and give it back?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>The <strong>stack</strong> is like a cafeteria tray -- food appears automatically when you sit down and gets cleared when you leave. The <strong>heap</strong> is like ordering from a menu with <code>malloc()</code> -- you ask for what you want, and you must return the tray yourself with <code>free()</code>. Forget to return it? That's a <strong>memory leak</strong>.</p>
+            </div>
+
+            <p>Common mistakes: forgetting to free (leak), freeing twice (crash!), or using memory after freeing it (dangling pointer -- like eating from a tray someone already took away).</p>
+        </div>
+
+        <!-- Ch11: Address Translation -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 11</div>
+            <h3>The Secret Translator</h3>
+            <p class="chapter-problem">How does the hardware convert fake addresses into real physical addresses?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Every letter you mail has your own made-up address system. The post office (hardware) has a secret formula: <strong>physical address = base + virtual address</strong>. If you try to access an address beyond your <strong>bounds</strong>, you get shut down -- no snooping into someone else's mail.</p>
+            </div>
+
+            <p>If the base register is 32KB and your program accesses virtual address 1000, the hardware calculates: physical = 32KB + 1000 = 33768. The hardware does the fast per-access translation; the OS handles the big-picture bookkeeping.</p>
+        </div>
+
+        <!-- Ch12: Segmentation -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 12</div>
+            <h3>Divide and Conquer: Segmentation</h3>
+            <p class="chapter-problem">With simple base-and-bounds, the big unused gap between heap and stack wastes real memory. How do we stop that waste?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Instead of moving your entire apartment into storage as one giant block (including empty rooms), store just the rooms you actually use. <strong>Segmentation</strong> breaks the address space into logical chunks -- code, heap, and stack -- each with its own base-and-bounds.</p>
+            </div>
+
+            <p>The downside? Over time, physical memory gets chopped into odd-sized free chunks that are hard to reuse -- <strong>external fragmentation</strong>. This problem motivates the next big idea: paging.</p>
+        </div>
+
+        <!-- Ch13: Free Space Management -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 13</div>
+            <h3>The Tetris Problem of Memory</h3>
+            <p class="chapter-problem">When memory is divided into variable-sized chunks, how do you manage the leftover free pieces?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Imagine playing Tetris, but you can never rotate the pieces. As blocks land and get removed, you end up with annoying little gaps. Even if you have enough total free space, no single gap might be big enough.</p>
+            </div>
+
+            <p>Allocators use strategies: <strong>best fit</strong> (tightest hole), <strong>first fit</strong> (first hole that works), and <strong>buddy allocation</strong> (splitting in powers of two so merging is easy). Each trades off speed, simplicity, and fragmentation. No perfect answer -- just smart compromises.</p>
+        </div>
+
+        <!-- Ch14: Paging -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 14</div>
+            <h3>Cookie-Cutter Memory: Paging</h3>
+            <p class="chapter-problem">Segmentation causes fragmentation because chunks are different sizes. What if we cut everything into identical pieces?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Imagine a parking garage where every spot is the exact same size. No matter what car (data) you need to park, just find any open spot. A <strong>page table</strong> is the map: "your page 0 is parked in spot 3, page 1 in spot 7."</p>
+            </div>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="160" rx="12" fill="#1a1a24"/>
+                    <!-- Virtual pages -->
+                    <text x="100" y="30" fill="#818cf8" font-size="10" text-anchor="middle" font-family="Inter">Virtual Pages</text>
+                    <rect x="60" y="38" width="80" height="25" rx="4" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1"/><text x="100" y="55" fill="#818cf8" font-size="10" text-anchor="middle" font-family="Inter">VP 0</text>
+                    <rect x="60" y="68" width="80" height="25" rx="4" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1"/><text x="100" y="85" fill="#818cf8" font-size="10" text-anchor="middle" font-family="Inter">VP 1</text>
+                    <rect x="60" y="98" width="80" height="25" rx="4" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1"/><text x="100" y="115" fill="#818cf8" font-size="10" text-anchor="middle" font-family="Inter">VP 2</text>
+                    <rect x="60" y="128" width="80" height="25" rx="4" fill="rgba(99,102,241,0.2)" stroke="#6366f1" stroke-width="1"/><text x="100" y="145" fill="#818cf8" font-size="10" text-anchor="middle" font-family="Inter">VP 3</text>
+                    <!-- Physical frames (scrambled) -->
+                    <text x="380" y="30" fill="#10b981" font-size="10" text-anchor="middle" font-family="Inter">Physical Frames</text>
+                    <rect x="340" y="38" width="80" height="25" rx="4" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1"/><text x="380" y="55" fill="#10b981" font-size="10" text-anchor="middle" font-family="Inter">PF 3</text>
+                    <rect x="340" y="68" width="80" height="25" rx="4" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1"/><text x="380" y="85" fill="#10b981" font-size="10" text-anchor="middle" font-family="Inter">PF 7</text>
+                    <rect x="340" y="98" width="80" height="25" rx="4" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1"/><text x="380" y="115" fill="#10b981" font-size="10" text-anchor="middle" font-family="Inter">PF 5</text>
+                    <rect x="340" y="128" width="80" height="25" rx="4" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1"/><text x="380" y="145" fill="#10b981" font-size="10" text-anchor="middle" font-family="Inter">PF 2</text>
+                    <!-- Page Table -->
+                    <rect x="190" y="55" width="100" height="80" rx="8" fill="rgba(245,158,11,0.1)" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="240" y="75" fill="#f59e0b" font-size="10" text-anchor="middle" font-weight="600" font-family="Inter">Page Table</text>
+                    <text x="240" y="92" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="Inter">0 &rarr; 3</text>
+                    <text x="240" y="104" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="Inter">1 &rarr; 7</text>
+                    <text x="240" y="116" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="Inter">2 &rarr; 5</text>
+                    <text x="240" y="128" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="Inter">3 &rarr; 2</text>
+                    <!-- Arrows -->
+                    <line x1="140" y1="90" x2="190" y2="90" stroke="#606070" stroke-width="1" stroke-dasharray="3"/>
+                    <line x1="290" y1="90" x2="340" y2="90" stroke="#606070" stroke-width="1" stroke-dasharray="3"/>
+                </svg>
+                <div class="diagram-caption">The page table maps virtual pages to physical frames. Pages can be scattered anywhere.</div>
+            </div>
+
+            <p>Paging eliminates external fragmentation entirely. But page tables can get huge (4MB per process for a 32-bit system!). The next chapters tackle making paging faster and smaller.</p>
+        </div>
+
+        <!-- Ch15: TLBs -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 15</div>
+            <h3>The Speed Dial for Memory: TLBs</h3>
+            <p class="chapter-problem">Paging requires looking up the page table for every memory access. Way too slow. How do we speed this up?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>You could look up every number in a giant phone book (page table), but that takes forever. Instead, memorize your most-called numbers. The <strong>TLB</strong> is that speed dial -- a tiny, super-fast cache of recent translations. 90%+ of accesses are instant hits.</p>
+            </div>
+
+            <p>A program accessing an array: the first access to each page is a TLB miss (slow), but every subsequent access to the same page is a hit (fast). Programs with good <strong>spatial locality</strong> (orderly access patterns) run much faster.</p>
+        </div>
+
+        <!-- Ch16: Multi-level Page Tables -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 16</div>
+            <h3>Shrinking the Phone Book: Multi-Level Page Tables</h3>
+            <p class="chapter-problem">Page tables are too big -- 4MB per process, 400MB for 100 processes!</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>You have a massive phone book, but most pages are blank. A <strong>multi-level page table</strong> is like a table of contents: you only print the sections that actually have entries. Empty sections? Just "nothing here" in the table of contents.</p>
+            </div>
+
+            <p>Modern x86 systems use four levels of page tables. The memory savings are dramatic -- you only allocate page table space for parts of the address space a program actually uses.</p>
+        </div>
+
+        <!-- Ch17: Swapping -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 17</div>
+            <h3>When Memory Isn't Enough: Swapping</h3>
+            <p class="chapter-problem">What happens when all your programs need more memory than your computer physically has?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Your desk (RAM) is small but fast. The filing cabinet (hard drive) is huge but slow. When your desk fills up, you put some papers in the cabinet. When you need them again, you pull them out. This is <strong>swapping</strong>.</p>
+            </div>
+
+            <p>When a program accesses a page not in RAM, the hardware triggers a <strong>page fault</strong>. The OS loads the page from disk, updates the page table, and restarts the program. It never knows this happened -- just a brief delay.</p>
+        </div>
+
+        <!-- Ch18: Page Replacement Policies -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 18</div>
+            <h3>Who Gets Kicked Out? Page Replacement</h3>
+            <p class="chapter-problem">When memory is full and you need a new page, which one should you remove?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Your desk is full and you need space. Which paper goes to the filing cabinet? The one you won't need for the longest time! That's the <strong>optimal policy</strong> -- but it requires a crystal ball. In practice, use <strong>LRU</strong>: kick out whatever you haven't touched in the longest time.</p>
+            </div>
+
+            <p>Real systems approximate LRU with the <strong>clock algorithm</strong>: sweep through pages like a clock hand, evicting ones that haven't been recently accessed. Prefer evicting "clean" pages since "dirty" ones must be written to disk first.</p>
+        </div>
+
+        <!-- Ch19: Complete VM Systems -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 19</div>
+            <h3>Putting It All Together: Complete VM Systems</h3>
+            <p class="chapter-problem">We've learned all the pieces. How does a real OS combine them?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>You've learned about bricks, plumbing, wiring, and roofing separately. Now see how an architect puts it all together. This chapter examines <strong>VAX/VMS</strong> (1970s classic) and <strong>Linux</strong> (modern standard).</p>
+            </div>
+
+            <p>Both use clever tricks like <strong>demand zeroing</strong> (don't clear a page until someone reads it) and <strong>copy-on-write</strong> (let processes share pages until one writes). A complete VM system is a carefully engineered combination of page tables, TLBs, replacement policies, and OS structures working together.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- PART 3: CONCURRENCY -->
+        <!-- ============================================================ -->
+        <div class="part-header conc" id="concurrency">
+            <div class="part-number">Part III</div>
+            <div class="part-title">Concurrency</div>
+            <div class="part-desc">What happens when multiple things try to happen at the same time.</div>
+        </div>
+
+        <!-- Ch20: Threads Intro -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 20</div>
+            <h3>When Cooks Share a Kitchen: Threads</h3>
+            <p class="chapter-problem">How can a single program do multiple things at the same time without everything going haywire?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>A thread is like having multiple cooks in the same kitchen. They share the same fridge and counters (memory), but each cook has their own hands and recipe step (registers, program counter). If two cooks add salt to the same pot without talking, you get a <strong>race condition</strong>.</p>
+            </div>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="140" rx="12" fill="#1a1a24"/>
+                    <!-- Thread 1 -->
+                    <rect x="50" y="30" width="130" height="100" rx="8" fill="rgba(99,102,241,0.1)" stroke="#6366f1" stroke-width="1"/>
+                    <text x="115" y="50" fill="#818cf8" font-size="11" font-weight="600" text-anchor="middle" font-family="Inter">Thread 1</text>
+                    <text x="115" y="70" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">read counter: 50</text>
+                    <text x="115" y="85" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">add 1: 51</text>
+                    <text x="115" y="100" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">write: 51</text>
+                    <!-- Thread 2 -->
+                    <rect x="320" y="30" width="130" height="100" rx="8" fill="rgba(245,158,11,0.1)" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="385" y="50" fill="#f59e0b" font-size="11" font-weight="600" text-anchor="middle" font-family="Inter">Thread 2</text>
+                    <text x="385" y="70" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">read counter: 50</text>
+                    <text x="385" y="85" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">add 1: 51</text>
+                    <text x="385" y="100" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">write: 51</text>
+                    <!-- Shared counter -->
+                    <rect x="210" y="55" width="80" height="35" rx="6" fill="rgba(239,68,68,0.2)" stroke="#ef4444" stroke-width="1.5"/>
+                    <text x="250" y="72" fill="#ef4444" font-size="9" text-anchor="middle" font-family="Inter">counter</text>
+                    <text x="250" y="85" fill="#ef4444" font-size="11" font-weight="700" text-anchor="middle" font-family="Inter">51 !!!</text>
+                    <text x="250" y="120" fill="#ef4444" font-size="9" text-anchor="middle" font-family="Inter">Should be 52!</text>
+                </svg>
+                <div class="diagram-caption">Two threads both read 50, both write 51. One update is lost -- a race condition.</div>
+            </div>
+
+            <p>Shared data plus uncontrolled scheduling equals unpredictable results. We need special tools (locks, condition variables) to fix this.</p>
+        </div>
+
+        <!-- Ch21: Thread API -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 21</div>
+            <h3>The Thread Instruction Manual</h3>
+            <p class="chapter-problem">How do you actually create threads, wait for them, and protect shared data in real code?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Like assembling IKEA furniture: <code>pthread_create</code> = open the box and start building. <code>pthread_join</code> = wait until your friend finishes their part. <strong>Locks</strong> = the "do not disturb" sign so only one person uses a room at a time.</p>
+            </div>
+
+            <p>Golden rules: keep it simple, always initialize your locks, check return codes, and never return a pointer to a local variable from a thread.</p>
+        </div>
+
+        <!-- Ch22: Locks -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 22</div>
+            <h3>Building the Bathroom Door: Locks</h3>
+            <p class="chapter-problem">How do we actually build a lock that prevents two threads from messing with the same data?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>A simple "check if locked, then lock" fails because two people can both check at the same instant and both walk in. The solution: <strong>test-and-set</strong> -- it checks AND locks the door in one single, unbreakable motion. Nobody can sneak in between.</p>
+            </div>
+
+            <p>A <strong>spin lock</strong> has you jiggling the handle in a loop -- wasteful. Better: take a number at the deli counter, sit down, get called when it's your turn. Linux uses a hybrid: try briefly, then sit down and wait.</p>
+        </div>
+
+        <!-- Ch23: Locked Data Structures -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 23</div>
+            <h3>Making Your Bookshelf Thread-Safe</h3>
+            <p class="chapter-problem">You have data structures that work fine with one thread. How do you add locks for multiple threads?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>One big padlock on an entire library (coarse-grained) = correct but slow. A separate lock on each bookshelf (fine-grained) = multiple people browsing different shelves at the same time.</p>
+            </div>
+
+            <p>An "approximate counter" gives each CPU core its own local counter (like each cashier having a tip jar). Periodically, local counts merge into the global total. Start simple with one big lock -- only get fancy if you measure a performance problem.</p>
+        </div>
+
+        <!-- Ch24: Condition Variables -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 24</div>
+            <h3>The Waiting Room: Condition Variables</h3>
+            <p class="chapter-problem">Sometimes a thread needs to wait for something specific to happen before continuing. How do you wait efficiently?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Instead of asking the receptionist "Is the doctor ready?" every five seconds (spin-waiting), sit in the waiting room and <strong>get called when it's your turn</strong>. Use <code>while</code> loops (not <code>if</code>) to recheck after waking -- someone might have snatched the appointment before you.</p>
+            </div>
+
+            <p>The classic <strong>producer/consumer</strong>: a chef makes sandwiches, a customer grabs them. Use TWO condition variables (buffer full, buffer empty) and always recheck with <code>while</code>.</p>
+        </div>
+
+        <!-- Ch25: Semaphores -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 25</div>
+            <h3>The Swiss Army Knife: Semaphores</h3>
+            <p class="chapter-problem">Locks and condition variables are two separate tools. Is there one that does both?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>A semaphore is a bouncer with a clicker-counter. Start at 5 (five seats). Each person entering decreases by one (<code>sem_wait</code>). At zero, wait outside. When someone leaves, count goes up (<code>sem_post</code>). Set initial count to 1 = a lock. Set to 0 = a signal.</p>
+            </div>
+
+            <p>The <strong>Dining Philosophers</strong> problem: five philosophers, five forks, everyone grabs left fork simultaneously -- <strong>deadlock</strong>! Fix: make one philosopher reach for forks in opposite order, breaking the cycle.</p>
+        </div>
+
+        <!-- Ch26: Concurrency Bugs -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 26</div>
+            <h3>The Bug Museum: Common Concurrency Bugs</h3>
+            <p class="chapter-problem">What are the actual bugs that real-world multi-threaded programs suffer from?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Like car accidents, most are caused by a few common mistakes. The two big ones: <strong>atomicity violations</strong> (you assumed steps would happen together, but another thread snuck in) and <strong>order violations</strong> (you assumed Thread A runs before B, but it didn't).</p>
+            </div>
+
+            <p>Thread 1 checks if a pointer is not NULL, then uses it. Between the check and use, Thread 2 sets it to NULL. Crash! Fix: wrap both inside a lock. For <strong>deadlock</strong>, the simplest fix is to always grab locks in the same order everywhere.</p>
+        </div>
+
+        <!-- Ch27: Event-based Concurrency -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 27</div>
+            <h3>One Juggler, Many Balls: Event-based Concurrency</h3>
+            <p class="chapter-problem">Threads are powerful but tricky. Can we handle many tasks at once WITHOUT threads?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Instead of hiring many waiters (threads) who bump into each other, have one super-efficient waiter who checks all tables in a loop: "Table 1 needs water? Done. Table 3 ordered? Send it." This is an <strong>event loop</strong>. One waiter = no locks needed! This is how Node.js works.</p>
+            </div>
+
+            <p>The catch: the waiter must NEVER get stuck at one table (blocking call). If something takes time, place the order asynchronously and move on. Neither threads nor events have "won" -- both remain useful.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- PART 4: PERSISTENCE -->
+        <!-- ============================================================ -->
+        <div class="part-header pers" id="persistence">
+            <div class="part-number">Part IV</div>
+            <div class="part-title">Persistence</div>
+            <div class="part-desc">How your data survives crashes, power failures, and the test of time.</div>
+        </div>
+
+        <!-- Ch28: I/O Devices -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 28</div>
+            <h3>Hey Computer, Talk to Your Gadgets!</h3>
+            <p class="chapter-problem">How does the OS communicate with devices (keyboards, disks, mice) without wasting the CPU's time?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>You order food at a restaurant. <strong>Polling</strong> = standing at the kitchen door staring until your meal is ready (wasteful!). <strong>Interrupts</strong> = sitting down and the waiter taps your shoulder when food arrives (smart!). <strong>DMA</strong> = a delivery robot brings food directly to your table without you or the waiter doing anything.</p>
+            </div>
+
+            <p>The OS uses <strong>device drivers</strong> -- translator programs that let it talk to any brand of keyboard, disk, or mouse using the same language, like a universal remote for different TVs.</p>
+        </div>
+
+        <!-- Ch29: Hard Disk Drives -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 29</div>
+            <h3>The Spinning Record Player of Data</h3>
+            <p class="chapter-problem">How does a hard disk store and retrieve files, and why are some patterns so much slower?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>A hard disk is like a vinyl record player. Data is on spinning platters, and a tiny arm swings to find the right track (<strong>seek</strong>), then waits for the right spot to spin underneath (<strong>rotational delay</strong>). Reading songs in order = fast. Jumping between random tracks = painfully slow.</p>
+            </div>
+
+            <p>Disk schedulers sort requests like an elevator stopping at floors in order rather than randomly bouncing (the <strong>SCAN/Elevator algorithm</strong>).</p>
+        </div>
+
+        <!-- Ch30: RAID -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 30</div>
+            <h3>Teamwork Makes the Dream Work: RAID</h3>
+            <p class="chapter-problem">A single disk is too slow, too small, or too risky. How can we combine multiple disks?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Group project! <strong>RAID-0</strong> splits work evenly -- super fast, but if one person is sick, everything's ruined. <strong>RAID-1</strong> = everyone keeps a backup copy -- safe, but double the people needed. <strong>RAID-5</strong> = the team stores a cheat sheet so if one member's work is lost, the others can reconstruct it.</p>
+            </div>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 150" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="130" rx="12" fill="#1a1a24"/>
+                    <!-- RAID-0 -->
+                    <text x="90" y="30" fill="#818cf8" font-size="10" font-weight="600" text-anchor="middle" font-family="Inter">RAID-0 (Striping)</text>
+                    <rect x="40" y="38" width="30" height="90" rx="4" fill="rgba(99,102,241,0.15)" stroke="#6366f1" stroke-width="1"/>
+                    <text x="55" y="60" fill="#818cf8" font-size="9" text-anchor="middle" font-family="Inter">A</text>
+                    <text x="55" y="90" fill="#818cf8" font-size="9" text-anchor="middle" font-family="Inter">E</text>
+                    <rect x="75" y="38" width="30" height="90" rx="4" fill="rgba(99,102,241,0.15)" stroke="#6366f1" stroke-width="1"/>
+                    <text x="90" y="60" fill="#818cf8" font-size="9" text-anchor="middle" font-family="Inter">B</text>
+                    <text x="90" y="90" fill="#818cf8" font-size="9" text-anchor="middle" font-family="Inter">F</text>
+                    <rect x="110" y="38" width="30" height="90" rx="4" fill="rgba(99,102,241,0.15)" stroke="#6366f1" stroke-width="1"/>
+                    <text x="125" y="60" fill="#818cf8" font-size="9" text-anchor="middle" font-family="Inter">C</text>
+                    <text x="125" y="90" fill="#818cf8" font-size="9" text-anchor="middle" font-family="Inter">G</text>
+                    <!-- RAID-1 -->
+                    <text x="250" y="30" fill="#10b981" font-size="10" font-weight="600" text-anchor="middle" font-family="Inter">RAID-1 (Mirror)</text>
+                    <rect x="210" y="38" width="30" height="90" rx="4" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1"/>
+                    <text x="225" y="60" fill="#10b981" font-size="9" text-anchor="middle" font-family="Inter">A</text>
+                    <text x="225" y="90" fill="#10b981" font-size="9" text-anchor="middle" font-family="Inter">B</text>
+                    <rect x="245" y="38" width="30" height="90" rx="4" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1"/>
+                    <text x="260" y="60" fill="#10b981" font-size="9" text-anchor="middle" font-family="Inter">A</text>
+                    <text x="260" y="90" fill="#10b981" font-size="9" text-anchor="middle" font-family="Inter">B</text>
+                    <rect x="280" y="38" width="30" height="90" rx="4" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1"/>
+                    <text x="295" y="60" fill="#10b981" font-size="9" text-anchor="middle" font-family="Inter">C</text>
+                    <text x="295" y="90" fill="#10b981" font-size="9" text-anchor="middle" font-family="Inter">D</text>
+                    <!-- RAID-5 -->
+                    <text x="415" y="30" fill="#f59e0b" font-size="10" font-weight="600" text-anchor="middle" font-family="Inter">RAID-5 (Parity)</text>
+                    <rect x="365" y="38" width="30" height="90" rx="4" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="380" y="60" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="Inter">A</text>
+                    <text x="380" y="90" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="Inter">D</text>
+                    <rect x="400" y="38" width="30" height="90" rx="4" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="415" y="60" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="Inter">B</text>
+                    <text x="415" y="90" fill="#ef4444" font-size="9" text-anchor="middle" font-family="Inter">P</text>
+                    <rect x="435" y="38" width="30" height="90" rx="4" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="450" y="60" fill="#ef4444" font-size="9" text-anchor="middle" font-family="Inter">P</text>
+                    <text x="450" y="90" fill="#f59e0b" font-size="9" text-anchor="middle" font-family="Inter">E</text>
+                </svg>
+                <div class="diagram-caption">Three RAID levels: speed (striping), safety (mirroring), or balance (parity).</div>
+            </div>
+
+            <p>The whole system looks like one big disk to your computer. RAID-5 uses XOR math so if one disk dies, the rest can reconstruct it.</p>
+        </div>
+
+        <!-- Ch31: Files and Directories -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 31</div>
+            <h3>The Filing Cabinet of Your Computer</h3>
+            <p class="chapter-problem">How does the OS let you organize, name, read, write, and share data on disk?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Your file system is a giant filing cabinet. Each drawer is a <strong>directory</strong>. Inside are documents (<strong>files</strong>). Each has a secret ID (<strong>inode number</strong>) but you see friendly names like "homework.docx." When you open a file, you get a <strong>file descriptor</strong> -- a ticket number for continued access.</p>
+            </div>
+
+            <p><strong>Hard links</strong> = two labels on the same folder. <strong>Symbolic links</strong> = sticky notes saying "go look over there." Deleting is really <strong>unlinking</strong> -- the data only disappears when no names point to it.</p>
+        </div>
+
+        <!-- Ch32: File System Implementation -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 32</div>
+            <h3>Building a Filing Cabinet from Scratch</h3>
+            <p class="chapter-problem">Given a blank disk, what data structures do you need to organize files?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Organizing a warehouse: (1) a <strong>map of shelves</strong> showing which are empty (<strong>bitmaps</strong>), (2) a <strong>card catalog</strong> with item descriptions (<strong>inode table</strong>), (3) the actual <strong>shelves of stuff</strong> (<strong>data region</strong>), (4) a <strong>master info sheet</strong> at the entrance (<strong>superblock</strong>).</p>
+            </div>
+
+            <p>Opening "/foo/bar" requires ~6 disk reads (root inode, root data, foo inode, foo data, bar inode, bar data). That's why <strong>caching</strong> in RAM is critical.</p>
+        </div>
+
+        <!-- Ch33: FFS -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 33</div>
+            <h3>Keep Related Stuff Close: The Fast File System</h3>
+            <p class="chapter-problem">The original UNIX file system scattered data everywhere, achieving only 2% of disk bandwidth. How can we fix this?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>A grocery store where milk, cereal, and bowls are in three different buildings across town. FFS redesigns the store so breakfast items are all in the same aisle (<strong>block group</strong>). Files in the same directory go in the same group.</p>
+            </div>
+
+            <p>For large files, FFS spreads chunks across multiple groups, but makes each chunk big enough that read time far outweighs the brief seek -- this is <strong>amortization</strong>.</p>
+        </div>
+
+        <!-- Ch34: Journaling -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 34</div>
+            <h3>What If the Power Goes Out Mid-Save? Journaling</h3>
+            <p class="chapter-problem">When the computer crashes mid-write, the file system can end up broken. How do we prevent this?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Remodeling your kitchen: tear out counter, install plumbing, put in new counter. If a tornado hits after step 1 but before step 3, disaster! <strong>Journaling</strong> is keeping a to-do list in a fireproof safe. After the tornado, check the safe and finish the job. The old approach (<strong>fsck</strong>) = searching the entire house to figure out what went wrong -- painfully slow.</p>
+            </div>
+
+            <div class="diagram">
+                <svg viewBox="0 0 500 120" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="480" height="100" rx="12" fill="#1a1a24"/>
+                    <!-- Step 1 -->
+                    <rect x="30" y="35" width="130" height="50" rx="8" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="1"/>
+                    <text x="95" y="55" fill="#f59e0b" font-size="10" font-weight="600" text-anchor="middle" font-family="Inter">1. Write to Journal</text>
+                    <text x="95" y="72" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">(the safe plan)</text>
+                    <!-- Arrow -->
+                    <path d="M165 60 L195 60" stroke="#606070" stroke-width="1.5" fill="none" marker-end="url(#arrow5)"/>
+                    <!-- Step 2 -->
+                    <rect x="200" y="35" width="130" height="50" rx="8" fill="rgba(16,185,129,0.15)" stroke="#10b981" stroke-width="1"/>
+                    <text x="265" y="55" fill="#10b981" font-size="10" font-weight="600" text-anchor="middle" font-family="Inter">2. Commit</text>
+                    <text x="265" y="72" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">(point of no return)</text>
+                    <!-- Arrow -->
+                    <path d="M335 60 L365 60" stroke="#606070" stroke-width="1.5" fill="none" marker-end="url(#arrow5)"/>
+                    <!-- Step 3 -->
+                    <rect x="370" y="35" width="100" height="50" rx="8" fill="rgba(99,102,241,0.15)" stroke="#6366f1" stroke-width="1"/>
+                    <text x="420" y="55" fill="#818cf8" font-size="10" font-weight="600" text-anchor="middle" font-family="Inter">3. Checkpoint</text>
+                    <text x="420" y="72" fill="#606070" font-size="9" text-anchor="middle" font-family="Inter">(write for real)</text>
+                    <defs><marker id="arrow5" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#606070"/></marker></defs>
+                </svg>
+                <div class="diagram-caption">Journaling: plan first, commit, then apply. Crash before commit? Ignore. After? Replay.</div>
+            </div>
+
+            <p>Most systems use <strong>metadata journaling</strong> (only logging inodes and bitmaps, not data) to cut write overhead in half.</p>
+        </div>
+
+        <!-- Ch35: LFS -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 35</div>
+            <h3>Never Erase, Just Keep Appending: LFS</h3>
+            <p class="chapter-problem">Traditional file systems scatter small writes across the disk. Can we make all writes sequential?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Instead of erasing old diary pages and rewriting, just keep writing on the next blank page -- always forward. LFS buffers all updates in memory, then writes them as one big sequential chunk. Since the disk arm never jumps, writes approach maximum speed.</p>
+            </div>
+
+            <p>The downside: old data piles up. A <strong>cleaner</strong> periodically reads segments with mostly dead data, copies live blocks, and frees the rest. Amazing write speed versus garbage collection overhead.</p>
+        </div>
+
+        <!-- Ch36: SSDs -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 36</div>
+            <h3>The Tricky Silicon Speed Demon: SSDs</h3>
+            <p class="chapter-problem">SSDs have no moving parts but weird rules -- you must erase before writing, and erasing wears it out.</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Flash memory is like a whiteboard: read anything instantly, but you can't overwrite one word -- you must erase the entire board first. Worse, each board can only be erased ~10,000 times. The <strong>Flash Translation Layer (FTL)</strong> is a librarian who writes updates on fresh boards and maintains a lookup table, ensuring equal wear on all boards (<strong>wear leveling</strong>).</p>
+            </div>
+
+            <p>SSDs crush hard drives in random read/write speed (100x+!) but cost about 10x more per gigabyte. Most modern FTLs use a log-structured design -- just like LFS!</p>
+        </div>
+
+        <!-- Ch37: Data Integrity -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 37</div>
+            <h3>Trust, but Verify: Data Integrity</h3>
+            <p class="chapter-problem">Disks sometimes silently corrupt your data without telling you. How do you detect this?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Mailing a letter: include a secret code (<strong>checksum</strong>) summarizing the contents. The recipient recalculates the code. If they match, the letter is intact. If not, something went wrong in transit. Storage systems compute checksums for every block of data.</p>
+            </div>
+
+            <p>For <strong>misdirected writes</strong> (data written to the wrong address), the checksum also stores the block offset. For <strong>lost writes</strong> (disk claims it wrote but didn't), keep separate checksum summaries. Regular <strong>disk scrubbing</strong> catches problems before all backups go bad.</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- PART 5: SECURITY -->
+        <!-- ============================================================ -->
+        <div class="part-header sec" id="security">
+            <div class="part-number">Part V</div>
+            <div class="part-title">Security</div>
+            <div class="part-desc">Protecting your system from attackers, inside and out.</div>
+        </div>
+
+        <!-- Ch38: Security Intro -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 38</div>
+            <h3>The Bodyguard of Your Digital World</h3>
+            <p class="chapter-problem">How do we protect the OS -- the master program -- from attackers who want to steal data or cause chaos?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>The OS is like the foundation of a house. Beautiful walls and roof mean nothing if the foundation is sand. If the OS is compromised, nothing above it is safe. Three big goals: keep secrets secret (<strong>confidentiality</strong>), prevent tampering (<strong>integrity</strong>), and keep things running (<strong>availability</strong>).</p>
+            </div>
+
+            <p>Timeless design principles: "keep it simple," "default to safe settings," "always check permissions," and give programs only the minimum permissions they need (<strong>least privilege</strong>).</p>
+        </div>
+
+        <!-- Ch39: Authentication -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 39</div>
+            <h3>Proving You Are Who You Say You Are</h3>
+            <p class="chapter-problem">Before granting access, the computer needs to verify identity. How?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Getting into a concert: something you <strong>know</strong> (password/secret phrase), something you <strong>have</strong> (ticket/phone token), or something you <strong>are</strong> (fingerprint/face). The best security uses two or more: <strong>multi-factor authentication</strong>.</p>
+            </div>
+
+            <p>The system stores a scrambled version of your password (<strong>hash</strong>). It adds random <strong>salt</strong> so two people with the same password produce different hashes. That's why short passwords are dangerous -- attackers guess millions per second.</p>
+        </div>
+
+        <!-- Ch40: Access Control -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 40</div>
+            <h3>The Bouncer at the Digital Door: Access Control</h3>
+            <p class="chapter-problem">Once we know who you are, how does the OS decide what you're allowed to do?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Two ways to run an exclusive club: <strong>Access Control Lists (ACLs)</strong> = a bouncer with a guest list on each door. <strong>Capabilities</strong> = handing out keys -- if you have the key, you're in. Most real systems (like Linux) use ACLs: each file says what owner, group, and everyone else can do.</p>
+            </div>
+
+            <p><strong>Role-Based Access Control</strong> is like uniforms: wearing the chef's hat gets you into the kitchen, not the manager's office. Assign permissions to roles, not individuals.</p>
+        </div>
+
+        <!-- Ch41: Cryptography -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 41</div>
+            <h3>Writing in Secret Code: Cryptography</h3>
+            <p class="chapter-problem">How do we protect data when it leaves the safety of our OS -- traveling the internet or sitting on a stolen laptop?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Putting your diary into a locked safe before mailing it. <strong>Symmetric</strong> = a shared locker combination (same key to lock and unlock). <strong>Public key</strong> = a mailbox: anyone can drop a letter in (encrypt with public key), but only the owner can open it (decrypt with private key).</p>
+            </div>
+
+            <p>The #1 rule: all security depends on keeping the key secret, not on hiding how the lock works. Modern phones use <strong>full disk encryption</strong> so a stolen phone yields only scrambled nonsense.</p>
+        </div>
+
+        <!-- Ch42: Distributed Security -->
+        <div class="chapter">
+            <div class="chapter-number">Chapter 42</div>
+            <h3>Staying Safe Across the Internet</h3>
+            <p class="chapter-problem">When computers talk over a network anyone can eavesdrop on, how do we keep conversations private?</p>
+
+            <div class="analogy-box">
+                <div class="analogy-label">Analogy</div>
+                <p>Sending a sealed letter through a chain of strangers. <strong>Certificates</strong> = a notarized ID card. A trusted authority vouches "yes, this public key belongs to Amazon.com." <strong>TLS/SSL</strong> sets up an encrypted tunnel using <strong>Diffie-Hellman key exchange</strong> -- two strangers agree on a shared secret while everyone listens, because the math is impossibly hard to reverse.</p>
+            </div>
+
+            <p>When you visit "https," your browser checks the certificate, creates a fresh shared secret via Diffie-Hellman, and encrypts everything. This entire handshake happens in a fraction of a second. Never type a password on "http" without the "s"!</p>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- TAKEAWAYS & REFERENCES -->
+        <!-- ============================================================ -->
+        <div class="takeaways">
+            <h2>Key Takeaways</h2>
+            <ul>
+                <li><strong>Virtualization:</strong> The OS creates illusions -- each program thinks it owns the CPU and all of memory, when really everything is shared</li>
+                <li><strong>Processes:</strong> Programs come alive as processes. The OS switches between them so fast, they all seem to run at once</li>
+                <li><strong>Scheduling:</strong> There's no perfect scheduler. Fast turnaround vs quick response is a fundamental trade-off. MLFQ learns from behavior</li>
+                <li><strong>Virtual Memory:</strong> Paging + TLBs + multi-level page tables = the illusion of infinite, private memory for every program</li>
+                <li><strong>Concurrency:</strong> Shared data + uncontrolled scheduling = bugs. Use locks, condition variables, or event loops to stay safe</li>
+                <li><strong>Persistence:</strong> File systems organize data on disk. Journaling prevents corruption on crash. SSDs are fast but need wear leveling</li>
+                <li><strong>Security:</strong> Authenticate, authorize, encrypt. Use least privilege. Never trust the network without TLS</li>
+            </ul>
+        </div>
+
+        <div class="references">
+            <h2>References</h2>
+            <ol>
+                <li>
+                    Remzi H. Arpaci-Dusseau and Andrea C. Arpaci-Dusseau. <em>Operating Systems: Three Easy Pieces.</em>
+                    <a href="https://pages.cs.wisc.edu/~remzi/OSTEP/">Free online textbook</a>
+                </li>
+                <li>
+                    GitHub repository with OSTEP homework solutions.
+                    <a href="https://github.com/xxyzz/ostep-hw">ostep-hw</a>
+                </li>
+                <li>
+                    OSTEP course materials and projects.
+                    <a href="https://github.com/remzi-arpacidusseau/ostep-projects">ostep-projects</a>
+                </li>
+            </ol>
+        </div>
+    </main>
+
+    <footer>
+        <p>Built by <a href="index.html">Peng Liu</a> · <a href="https://github.com/lpxz">GitHub</a></p>
+    </footer>
+
+    <script>
+        // Reading progress bar
+        window.addEventListener('scroll', () => {
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = (window.scrollY / docHeight) * 100;
+            document.getElementById('progress').style.width = scrolled + '%';
+        });
+    </script>
+</body>
+</html>

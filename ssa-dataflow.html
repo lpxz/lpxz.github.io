@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dataflow Over SSA: Why the Kill Set Disappears - Peng Liu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: rgba(255, 255, 255, 0.08);
+            --code-bg: #1e1e2e;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-size: 17px;
+        }
+
+        /* Reading Progress Bar */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        nav a:hover {
+            color: var(--accent-light);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 8rem 2rem 4rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tag {
+            background: var(--accent-glow);
+            color: var(--accent-light);
+            padding: 0.4rem 1rem;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .date {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Table of Contents */
+        .toc {
+            position: fixed;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            display: none;
+        }
+
+        @media (min-width: 1400px) {
+            .toc {
+                display: block;
+            }
+        }
+
+        .toc-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+        }
+
+        .toc a {
+            display: block;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            padding: 0.5rem 0;
+            border-left: 2px solid var(--border);
+            padding-left: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .toc a:hover, .toc a.active {
+            color: var(--accent-light);
+            border-left-color: var(--accent);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 2rem 6rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 4rem 0 1.5rem;
+            letter-spacing: -0.01em;
+            position: relative;
+        }
+
+        h2::before {
+            content: '';
+            position: absolute;
+            left: -2rem;
+            top: 0.5rem;
+            width: 4px;
+            height: 1.5rem;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light));
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 2.5rem 0 1rem;
+        }
+
+        p {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Links */
+        a {
+            color: var(--accent-light);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--text-primary);
+        }
+
+        .container p a {
+            background: linear-gradient(180deg, transparent 60%, var(--accent-glow) 60%);
+            padding: 0 0.2rem;
+        }
+
+        .container p a:hover {
+            background: linear-gradient(180deg, transparent 60%, rgba(99, 102, 241, 0.3) 60%);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.75rem;
+            padding-left: 0.5rem;
+        }
+
+        li::marker {
+            color: var(--accent);
+        }
+
+        /* Code */
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            background: var(--bg-tertiary);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            color: var(--accent-light);
+        }
+
+        pre {
+            background: var(--code-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            margin: 2rem 0;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* Syntax Highlighting */
+        .keyword { color: #c678dd; }
+        .string { color: #98c379; }
+        .function { color: #61afef; }
+        .comment { color: #5c6370; font-style: italic; }
+        .type { color: #e5c07b; }
+
+        /* Highlight Box */
+        .highlight {
+            background: linear-gradient(135deg, var(--accent-glow), transparent);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .highlight::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--accent), var(--accent-light));
+        }
+
+        .highlight strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .highlight p {
+            margin: 0;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            font-size: 0.95rem;
+        }
+
+        .comparison-table th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            border-bottom: 2px solid var(--accent);
+            background: var(--bg-secondary);
+        }
+
+        .comparison-table td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comparison-table tr:hover td {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        /* Diagram */
+        .diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .diagram .label {
+            color: var(--accent-light);
+            font-weight: 500;
+        }
+
+        .diagram .dim {
+            color: var(--text-muted);
+        }
+
+        .diagram .accent {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .diagram .warn {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .diagram figcaption {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            font-style: italic;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Key Takeaways */
+        .takeaways {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 3rem 0;
+            border: 1px solid var(--border);
+        }
+
+        .takeaways h2 {
+            margin-top: 0;
+        }
+
+        .takeaways h2::before {
+            display: none;
+        }
+
+        .takeaways ul {
+            margin-bottom: 0;
+        }
+
+        .takeaways li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .takeaways li:last-child {
+            border-bottom: none;
+        }
+
+        .takeaways strong {
+            color: var(--accent-light);
+        }
+
+        /* References */
+        .references {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .references h2::before {
+            display: none;
+        }
+
+        .references ol {
+            list-style: none;
+            padding-left: 0;
+            counter-reset: ref-counter;
+        }
+
+        .references li {
+            counter-increment: ref-counter;
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .references li::before {
+            content: counter(ref-counter);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.9rem;
+            min-width: 1.5rem;
+        }
+
+        .references li:last-child {
+            border-bottom: none;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 4rem;
+        }
+
+        footer a {
+            color: var(--text-muted);
+        }
+
+        footer a:hover {
+            color: var(--accent-light);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero, .container > * {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body {
+                font-size: 16px;
+            }
+
+            .hero {
+                padding: 6rem 1.5rem 2rem;
+            }
+
+            .container {
+                padding: 0 1.5rem 4rem;
+            }
+
+            h2::before {
+                display: none;
+            }
+
+            pre {
+                border-radius: 0;
+                margin: 2rem -1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progress"></div>
+
+    <nav>
+        <a href="index.html" style="color: var(--text-primary); font-weight: 600;">Peng Liu</a>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="blogs.html">Blog</a>
+            <a href="publications.html">Publications</a>
+        </div>
+    </nav>
+
+    <div class="toc">
+        <div class="toc-title">Contents</div>
+        <a href="#two-directions">Two Directions</a>
+        <a href="#no-kill">The Kill Set Vanishes</a>
+        <a href="#reaching-defs">Reaching Definitions</a>
+        <a href="#convergence">How Fast Does It Converge?</a>
+        <a href="#doors">The Doors Intuition</a>
+        <a href="#skip-blocks">Skip the Blocks Entirely</a>
+        <a href="#takeaways">Takeaways</a>
+    </div>
+
+    <header class="hero">
+        <div class="hero-meta">
+            <span class="tag">Program Analysis</span>
+            <span class="tag">SSA</span>
+            <span class="date">March 2026</span>
+        </div>
+        <h1>Dataflow Over SSA: Why the Kill Set Disappears</h1>
+        <p class="subtitle">
+            Traditional dataflow analysis spends most of its effort figuring out which definitions overwrite which. SSA eliminates that problem entirely &mdash; and the consequences ripple through everything: faster convergence, simpler implementations, and analyses that skip blocks altogether.
+        </p>
+    </header>
+
+    <main class="container">
+        <h2 id="two-directions">Two Directions to Walk</h2>
+
+        <p>
+            In <a href="golang-ssa.html">the previous post</a>, we built up SSA from scratch: one definition per name, phi nodes at join points, immutable values. Now the question is: what can you <em>do</em> with it?
+        </p>
+
+        <p>
+            The SSA graph gives you two directions to walk:
+        </p>
+
+        <ul>
+            <li><strong>Forward (def &rarr; use):</strong> Given a value, <code>GetReferrals()</code> returns every instruction that uses it. "Where does this data flow to?"</li>
+            <li><strong>Backward (use &rarr; def):</strong> Given an instruction, <code>Operands()</code> returns every value it consumes. "Where did this data come from?"</li>
+        </ul>
+
+        <p>
+            That's it. Two methods, and you can reach anything in the function.
+        </p>
+
+        <div class="diagram">
+            <pre style="background: none; border: none; padding: 0; margin: 0; text-align: left; display: inline-block;"><code style="background: none;"><span class="label">t0</span> = Parameter {x}
+<span class="label">t1</span> = t0 + <span class="string">2</span>
+<span class="label">t2</span> = t1 * <span class="string">3</span>
+print(<span class="label">t2</span>)
+
+<span class="dim">── Forward ──────────────────────────────</span>
+t0.<span class="function">GetReferrals()</span>  <span class="accent">&rarr;</span>  [t1 = t0 + 2]
+t1.<span class="function">GetReferrals()</span>  <span class="accent">&rarr;</span>  [t2 = t1 * 3]
+
+<span class="dim">── Backward ─────────────────────────────</span>
+(t2 = t1 * 3).<span class="function">Operands()</span>  <span class="accent">&rarr;</span>  [t1, 3]
+(t1 = t0 + 2).<span class="function">Operands()</span>  <span class="accent">&rarr;</span>  [t0, 2]</code></pre>
+            <figcaption>Forward follows data downstream. Backward traces it to its origin.</figcaption>
+        </div>
+
+        <p>
+            Forward analysis propagates facts from definitions to uses &mdash; constant propagation, taint tracking. Backward analysis traces from uses back to definitions &mdash; liveness, program slicing.
+        </p>
+
+        <p>
+            But here's what makes SSA special: for many analyses, walking these chains directly is <em>all you need</em>. You don't have to iterate over blocks at all. To see why, we need to understand what SSA does to the classical dataflow framework.
+        </p>
+
+        <h2 id="no-kill">The Kill Set Vanishes</h2>
+
+        <p>
+            In traditional (non-SSA) dataflow, the transfer function for a block looks like this:
+        </p>
+
+        <pre><code>OUT = GEN &cup; (IN &minus; <span class="warn">KILL</span>)</code></pre>
+
+        <p>
+            <code>GEN</code> is what the block produces. <code>KILL</code> is what it destroys. The kill set exists because two assignments can target the same variable:
+        </p>
+
+        <pre><code>x = <span class="string">1</span>      <span class="comment">// def&#8321; &mdash; this gets killed</span>
+x = <span class="string">2</span>      <span class="comment">// def&#8322; kills def&#8321;</span>
+use(x)     <span class="comment">// only def&#8322; reaches here</span></code></pre>
+
+        <p>
+            In SSA, those become distinct names:
+        </p>
+
+        <pre><code>x<span class="label">&#8321;</span> = <span class="string">1</span>
+x<span class="label">&#8322;</span> = <span class="string">2</span>
+use(x<span class="label">&#8322;</span>)    <span class="comment">// x&#8322;'s def is known trivially via Operands()</span></code></pre>
+
+        <p>
+            No two definitions share a name. No definition can overwrite another. The kill set is <strong>always empty</strong>.
+        </p>
+
+        <div class="highlight">
+            <p><strong>The key insight:</strong> SSA kills the kill set. The transfer function collapses from <code>OUT = GEN &cup; (IN &minus; KILL)</code> to just <code>OUT = GEN &cup; IN</code>. Facts only grow. They never shrink.</p>
+        </div>
+
+        <p>
+            This sounds like a minor simplification. It's not. It changes everything about how fast the analysis converges.
+        </p>
+
+        <h2 id="reaching-defs">Reaching Definitions: The Simplest Example</h2>
+
+        <p>
+            Reaching definitions asks: "which definitions <em>might</em> still be in scope at each program point?" On traditional IR, this requires tracking gen and kill sets, iterating to a fixpoint. On SSA, the implementation is almost embarrassingly simple:
+        </p>
+
+        <pre><code><span class="keyword">for</span> len(worklist) > <span class="string">0</span> {
+    b := worklist.pop()
+
+    <span class="comment">// IN = union of all predecessors' OUT</span>
+    newIn := <span class="function">union</span>(facts[pred].Out <span class="keyword">for</span> pred <span class="keyword">in</span> b.Preds)
+
+    <span class="comment">// OUT = IN &cup; GEN</span>
+    <span class="comment">// That's it. No kill.</span>
+    newOut := newIn &cup; gen[b]
+
+    <span class="keyword">if</span> newOut changed {
+        facts[b].Out = newOut
+        worklist.add(b.Succs...)
+    }
+}</code></pre>
+
+        <p>
+            Compare this with the non-SSA version, which needs to compute kill sets for every block (which definitions in this block overwrite definitions from elsewhere?), then subtract them. Here, you just union and grow.
+        </p>
+
+        <p>
+            Of course, reaching definitions on SSA is almost a joke &mdash; if you want to know what reaches an instruction, just call <code>Operands()</code>. The definition <em>is</em> the operand. But the framework is a useful template for more interesting analyses, and the "no kill" property carries over to all of them.
+        </p>
+
+        <h2 id="convergence">How Fast Does It Converge?</h2>
+
+        <p>
+            Since facts only grow (no kill to shrink them), how many passes over the CFG does the worklist need?
+        </p>
+
+        <h3>Acyclic CFG: 1 pass</h3>
+
+        <p>
+            No loops means no back edges. Process blocks in reverse postorder, and every predecessor is handled before its successors. One pass, done.
+        </p>
+
+        <h3>Single loop: 2 passes</h3>
+
+        <p>
+            A loop introduces a back edge &mdash; an edge that goes "backward" in the reverse postorder. On the first pass, the block at the back edge target hasn't yet seen the facts from the back edge source (it was processed earlier). Pass two picks those up.
+        </p>
+
+        <div class="diagram">
+            <pre style="background: none; border: none; padding: 0; margin: 0; text-align: left; display: inline-block;"><code style="background: none;"><span class="label">B1</span> &rarr; <span class="label">B2</span> &rarr; <span class="label">B3</span>
+       &uarr;         |
+       &larr; &larr; &larr; &larr; &larr;     <span class="dim">(back edge)</span>
+
+RPO: B1, B2, B3
+
+<span class="warn">Pass 1:</span> B2 processes before B3.
+         B3 generates a fact. B2 doesn't see it yet.
+
+<span class="accent">Pass 2:</span> B2 picks up B3's fact via the back edge. Done.</code></pre>
+            <figcaption>A single back edge needs one extra pass to propagate facts backward.</figcaption>
+        </div>
+
+        <h3>Nested loops of depth <em>d</em>: <em>d</em>&nbsp;+&nbsp;1 passes</h3>
+
+        <p>
+            This is where it gets interesting. Consider a fact born in the innermost loop that needs to reach the outermost loop header. It has to cross multiple back edges, and each one costs a pass.
+        </p>
+
+        <div class="diagram">
+            <pre style="background: none; border: none; padding: 0; margin: 0; text-align: left; display: inline-block;"><code style="background: none;"><span class="label">B1</span> &rarr; <span class="label">B2</span> &rarr; <span class="label">B3</span> &rarr; <span class="label">B4</span> &rarr; <span class="label">B3</span>  <span class="dim">(inner back edge)</span>
+       &uarr;    |
+       &larr; &larr; &larr;                  <span class="dim">(outer back edge: B3 &rarr; B2)</span>
+
+Def born in <span class="warn">B4</span>.
+
+<span class="dim">Pass 1:</span> B4 has the fact. Nobody else does.
+<span class="warn">Pass 2:</span> B3 gets it via inner back edge.
+         B2 is processed <em>before</em> B3 in RPO &mdash; misses it.
+<span class="accent">Pass 3:</span> B2 finally picks it up from B3.</code></pre>
+            <figcaption>Two back edges to cross = two extra passes. In general: depth d needs d + 1 passes.</figcaption>
+        </div>
+
+        <p>
+            The fact bubbles <strong>outward</strong>, one layer per pass. Each back edge crossing costs one pass because in reverse postorder, the back edge target is processed before its source &mdash; so it only sees the updated facts on the <em>next</em> pass.
+        </p>
+
+        <p>
+            Note the direction: going from an <em>outer</em> block to an <em>inner</em> block is just forward flow along regular edges &mdash; one pass handles it. The expensive direction is <strong>inner &rarr; outer</strong>, because that's against the flow, requiring back edge crossings.
+        </p>
+
+        <h2 id="doors">The Doors Intuition</h2>
+
+        <p>
+            Here's a way to think about it that makes the pass count obvious:
+        </p>
+
+        <div class="highlight">
+            <p><strong>Each back edge is a door that only opens once per pass.</strong></p>
+        </div>
+
+        <p>
+            In reverse postorder, you process blocks top-down. A back edge goes bottom-up &mdash; against the processing direction. When you arrive at the target block, the source block's update from <em>this</em> pass hasn't happened yet. You only see it on the next pass. The door opens, the fact walks through, and the door closes until next pass.
+        </p>
+
+        <div class="diagram">
+            <pre style="background: none; border: none; padding: 0; margin: 0; text-align: left; display: inline-block;"><code style="background: none;"><span class="dim">depth 0:</span>  fact &rarr; <span class="accent">done</span>                      <span class="dim">(1 pass)</span>
+
+<span class="dim">depth 1:</span>  fact &rarr; <span class="warn">door</span> &rarr; <span class="accent">done</span>               <span class="dim">(2 passes)</span>
+
+<span class="dim">depth 2:</span>  fact &rarr; <span class="warn">door</span> &rarr; <span class="warn">door</span> &rarr; <span class="accent">done</span>        <span class="dim">(3 passes)</span>
+
+<span class="dim">depth d:</span>  fact &rarr; <span class="warn">door</span> &times; d &rarr; <span class="accent">done</span>            <span class="dim">(d+1 passes)</span></code></pre>
+            <figcaption>One door per loop nesting level. One pass to open each.</figcaption>
+        </div>
+
+        <p>
+            Compare this with non-SSA dataflow: kill sets mean a block can <em>shrink</em> what flows through it, so facts might need to circulate around a loop multiple times before the interplay of gen and kill stabilizes. That can take many more iterations. With SSA, pure growth means each door only needs to open once.
+        </p>
+
+        <h2 id="skip-blocks">Skip the Blocks Entirely</h2>
+
+        <p>
+            Here's the real payoff. The block-level worklist we just described works, but for many analyses on SSA you don't need it at all. Instead of iterating over blocks, you follow the def-use chains directly.
+        </p>
+
+        <p>
+            Consider constant propagation. You want to know: is this value always a constant?
+        </p>
+
+        <pre><code><span class="comment">// Sparse constant propagation on SSA</span>
+<span class="comment">// No block iteration. Just follow the graph.</span>
+
+worklist := [all instructions]
+
+<span class="keyword">for</span> len(worklist) > <span class="string">0</span> {
+    inst := worklist.pop()
+
+    <span class="comment">// check if all operands are constant</span>
+    <span class="keyword">if</span> <span class="function">allOperandsConst</span>(inst) {
+        result := <span class="function">fold</span>(inst)        <span class="comment">// evaluate at compile time</span>
+        lattice[inst] = Const(result)
+
+        <span class="comment">// propagate to all uses</span>
+        <span class="keyword">for</span> _, user := <span class="keyword">range</span> inst.<span class="function">GetReferrals</span>() {
+            worklist.add(user)
+        }
+    }
+}</code></pre>
+
+        <p>
+            No blocks. No IN/OUT sets. No gen/kill. You seed the worklist with instructions, evaluate them, and follow <code>GetReferrals()</code> to propagate. The SSA graph <em>is</em> the dataflow graph.
+        </p>
+
+        <p>
+            This is called <strong>sparse analysis</strong>, and it's the main reason SSA exists in modern compilers. Instead of propagating facts through every instruction in every block (most of which are irrelevant), you only visit the instructions that matter. Loop nesting depth becomes irrelevant &mdash; there are no block-level passes to count.
+        </p>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Block-level (traditional)</th>
+                    <th>Sparse (SSA)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Unit of work</strong></td>
+                    <td>Basic block</td>
+                    <td>Individual instruction</td>
+                </tr>
+                <tr>
+                    <td><strong>Propagation</strong></td>
+                    <td>IN/OUT sets, predecessors/successors</td>
+                    <td><code>GetReferrals()</code> / <code>Operands()</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Kill set</strong></td>
+                    <td>Must compute</td>
+                    <td>Doesn't exist</td>
+                </tr>
+                <tr>
+                    <td><strong>Loop sensitivity</strong></td>
+                    <td>Depth <em>d</em> &rarr; <em>d</em>+1 passes</td>
+                    <td>Irrelevant</td>
+                </tr>
+                <tr>
+                    <td><strong>Wasted work</strong></td>
+                    <td>Visits all instructions in a block</td>
+                    <td>Only visits relevant instructions</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>
+            The same pattern works for dead code elimination (<code>GetReferrals()</code> is empty? The def is dead), copy propagation (follow the chain, replace uses), and type inference (propagate types forward through uses).
+        </p>
+
+        <p>
+            The one place that still needs care is <strong>phi nodes</strong>. A phi merges values from different predecessors, so when propagating through a phi, you need to check all incoming operands. If they all agree (all the same constant, all tainted), the phi result inherits that fact. If they disagree, you take the lattice meet. Phis are where path-sensitivity and fixpoints sneak back in &mdash; but only locally, at join points, not across entire blocks.
+        </p>
+
+        <div class="takeaways">
+            <h2 id="takeaways">Key Takeaways</h2>
+            <ul>
+                <li><strong>Two directions:</strong> <code>GetReferrals()</code> walks def &rarr; use (forward). <code>Operands()</code> walks use &rarr; def (backward). Two methods to traverse the entire SSA graph.</li>
+                <li><strong>No kill set:</strong> Every SSA name is unique, so no definition overwrites another. The transfer function simplifies to <code>OUT = GEN &cup; IN</code> &mdash; facts only grow.</li>
+                <li><strong>Convergence scales with nesting:</strong> Acyclic: 1 pass. Single loop: 2 passes. Nesting depth <em>d</em>: <em>d</em>+1 passes. Each back edge is a door that opens once per pass.</li>
+                <li><strong>Inner &rarr; outer is the expensive direction:</strong> Facts flowing forward along regular edges are free. Facts crossing back edges (bubbling outward through loop nests) cost one pass each.</li>
+                <li><strong>Sparse analysis skips blocks:</strong> Follow def-use chains directly via <code>GetReferrals()</code>. No blocks, no IN/OUT sets, no loop-depth sensitivity. This is the real payoff of SSA.</li>
+            </ul>
+        </div>
+
+        <div class="references">
+            <h2>References</h2>
+            <ol>
+                <li>
+                    Cytron et al. <em>Efficiently Computing Static Single Assignment Form and the Control Dependence Graph</em>. ACM TOPLAS, 1991. The foundational SSA paper.
+                </li>
+                <li>
+                    Wegman &amp; Zadeck. <em>Constant Propagation with Conditional Branches</em>. ACM TOPLAS, 1991. Introduced sparse conditional constant propagation (SCCP) over SSA.
+                </li>
+                <li>
+                    Aho, Lam, Sethi &amp; Ullman. <em>Compilers: Principles, Techniques, and Tools</em> (2nd ed). Chapter 9: dataflow analysis foundations.
+                </li>
+                <li>
+                    Go SSA package. <a href="https://pkg.go.dev/golang.org/x/tools/go/ssa"><code>golang.org/x/tools/go/ssa</code></a>
+                </li>
+            </ol>
+        </div>
+    </main>
+
+    <footer>
+        <p>Built by <a href="index.html">Peng Liu</a> &middot; <a href="https://github.com/lpxz">GitHub</a></p>
+    </footer>
+
+    <script>
+        // Reading progress bar
+        window.addEventListener('scroll', () => {
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrolled = (window.scrollY / docHeight) * 100;
+            document.getElementById('progress').style.width = scrolled + '%';
+        });
+
+        // Active TOC highlighting
+        const sections = document.querySelectorAll('h2[id]');
+        const tocLinks = document.querySelectorAll('.toc a');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 200) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            tocLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

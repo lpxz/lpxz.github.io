@@ -513,35 +513,46 @@
         </div>
         <h1>IFDS: Turning Program Analysis into a Graph Problem</h1>
         <p class="subtitle">
-            How do security tools find bugs in million-line codebases? IFDS turns "can bad data reach here?" into simple graph pathfinding. The key insight behind tools like FlowDroid.
+            At any line of code, which earlier assignments could have set this variable's value? IFDS answers this by turning dataflow analysis into graph pathfinding — the key insight behind compilers and security tools.
         </p>
     </header>
 
     <main class="container">
-        <h2 id="problem">The Problem: Where Does Your Data Go?</h2>
+        <h2 id="problem">The Problem: Where Did This Value Come From?</h2>
 
         <p>
-            You install a flashlight app. It reads your GPS location. Does that location ever get sent to the internet? This is the question <strong>FlowDroid</strong> answers for millions of Android apps:
+            Consider this code. At the <code>print(x)</code> line, which assignment to <code>x</code> could have produced the value we're printing?
         </p>
 
-        <pre><code><span class="keyword">void</span> <span class="function">onCreate</span>() {
-    Location loc = gps.<span class="function">getLocation</span>();      <span class="comment">// sensitive data</span>
-    String coords = <span class="function">format</span>(loc);            <span class="comment">// still sensitive</span>
-    <span class="function">analytics</span>(coords);                      <span class="comment">// leak? or safe?</span>
+        <pre><code><span class="keyword">void</span> <span class="function">main</span>() {
+    x = <span class="string">1</span>;                <span class="comment">// definition d1</span>
+    x = <span class="string">2</span>;                <span class="comment">// definition d2</span>
+    <span class="function">foo</span>();
+    <span class="function">print</span>(x);            <span class="comment">// which definition reaches here?</span>
 }
 
-<span class="keyword">void</span> <span class="function">analytics</span>(String data) {
-    <span class="keyword">if</span> (user.hasConsent()) {
-        http.<span class="function">post</span>(<span class="string">"tracker.com"</span>, data);      <span class="comment">// LEAK!</span>
-    }
+<span class="keyword">void</span> <span class="function">foo</span>() {
+    x = <span class="string">3</span>;                <span class="comment">// definition d3</span>
 }</code></pre>
 
         <p>
-            The question: does data from <code>getLocation()</code> ever reach <code>http.post()</code>?
+            The answer is <strong>d3</strong> — the assignment inside <code>foo()</code>. But here's where it gets tricky:
+        </p>
+
+        <pre><code><span class="keyword">void</span> <span class="function">main</span>() {
+    x = <span class="string">1</span>;                <span class="comment">// d1</span>
+    <span class="keyword">if</span> (condition) {
+        <span class="function">foo</span>();            <span class="comment">// might set x = 3</span>
+    }
+    <span class="function">print</span>(x);            <span class="comment">// d1 or d3?</span>
+}</code></pre>
+
+        <p>
+            Now <strong>both d1 and d3</strong> could reach the print. We need to track all possible definitions through all possible paths — including paths that go through function calls.
         </p>
 
         <p>
-            This is hard because data flows through multiple functions. We need to track it through <code>format()</code>, into <code>analytics()</code>, and finally to the network call. And if <code>analytics()</code> is called from multiple places, we can't mix up which calls had sensitive data.
+            This is <strong>reaching definitions</strong>: at each program point, which assignments might have produced each variable's current value? It's the foundation for dead code elimination, constant propagation, and bug detection.
         </p>
 
         <h2 id="insight">The Key Insight: Explode the Graph</h2>
