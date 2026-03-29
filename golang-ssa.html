@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Go SSA: Understanding Static Single Assignment from Scratch - Peng Liu</title>
+    <title>Go SSA: From First Principles to Dataflow Analysis - Peng Liu</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -437,6 +437,47 @@
             font-style: italic;
         }
 
+        /* Diagram */
+        .diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .diagram .label {
+            color: var(--accent-light);
+            font-weight: 500;
+        }
+
+        .diagram .dim {
+            color: var(--text-muted);
+        }
+
+        .diagram .accent {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .diagram .warn {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .diagram figcaption {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            font-style: italic;
+            font-family: 'Inter', sans-serif;
+        }
+
         /* Footer */
         footer {
             text-align: center;
@@ -517,6 +558,11 @@
         <a href="#phi">Phi Nodes</a>
         <a href="#loops">Loops in SSA</a>
         <a href="#walking">Walking the Graph</a>
+        <a href="#no-kill">The Kill Set Vanishes</a>
+        <a href="#reaching-defs">Reaching Definitions</a>
+        <a href="#convergence">Convergence</a>
+        <a href="#doors">The Doors Intuition</a>
+        <a href="#skip-blocks">Skip the Blocks</a>
         <a href="#code">Building SSA in Go</a>
         <a href="#takeaways">Takeaways</a>
     </div>
@@ -525,11 +571,12 @@
         <div class="hero-meta">
             <span class="tag">Program Analysis</span>
             <span class="tag">Go</span>
+            <span class="tag">SSA</span>
             <span class="date">March 2026</span>
         </div>
-        <h1>Go SSA: Understanding Static Single Assignment from Scratch</h1>
+        <h1>Go SSA: From First Principles to Dataflow Analysis</h1>
         <p class="subtitle">
-            SSA is the intermediate representation that powers compilers and static analysis tools. This post builds it up step by step &mdash; from the core idea, to phi nodes, to walking the graph in Go code.
+            SSA is the intermediate representation that powers compilers and static analysis tools. This post builds it up from scratch &mdash; from the core idea, to phi nodes, to walking the graph &mdash; then shows how SSA transforms dataflow analysis by killing the kill set.
         </p>
     </header>
 
@@ -781,6 +828,248 @@ param := fn.Params[<span class="string">0</span>]
             <p><strong>The whole picture:</strong> <code>Referrers()</code> goes forward (value &rarr; instructions that use it). <code>Operands()</code> goes backward (instruction &rarr; values it depends on).</p>
         </div>
 
+        <p>
+            Forward analysis propagates facts from definitions to uses &mdash; constant propagation, taint tracking. Backward analysis traces from uses back to definitions &mdash; liveness, program slicing. But here's what makes SSA special: for many analyses, walking these chains directly is <em>all you need</em>. To see why, we need to understand what SSA does to the classical dataflow framework.
+        </p>
+
+        <h2 id="no-kill">The Kill Set Vanishes</h2>
+
+        <p>
+            In traditional (non-SSA) dataflow, the transfer function for a block looks like this:
+        </p>
+
+        <pre><code>OUT = GEN &cup; (IN &minus; <span class="warn">KILL</span>)</code></pre>
+
+        <p>
+            <code>GEN</code> is what the block produces. <code>KILL</code> is what it destroys. The kill set exists because two assignments can target the same variable:
+        </p>
+
+        <pre><code>x = <span class="string">1</span>      <span class="comment">// def&#8321; &mdash; this gets killed</span>
+x = <span class="string">2</span>      <span class="comment">// def&#8322; kills def&#8321;</span>
+use(x)     <span class="comment">// only def&#8322; reaches here</span></code></pre>
+
+        <p>
+            In SSA, those become distinct names:
+        </p>
+
+        <pre><code>x<span class="label">&#8321;</span> = <span class="string">1</span>
+x<span class="label">&#8322;</span> = <span class="string">2</span>
+use(x<span class="label">&#8322;</span>)    <span class="comment">// x&#8322;'s def is known trivially via Operands()</span></code></pre>
+
+        <p>
+            No two definitions share a name. No definition can overwrite another. The kill set is <strong>always empty</strong>.
+        </p>
+
+        <div class="highlight">
+            <p><strong>The key insight:</strong> SSA kills the kill set. The transfer function collapses from <code>OUT = GEN &cup; (IN &minus; KILL)</code> to just <code>OUT = GEN &cup; IN</code>. Facts only grow. They never shrink.</p>
+        </div>
+
+        <p>
+            This sounds like a minor simplification. It's not. It changes everything about how fast the analysis converges.
+        </p>
+
+        <h2 id="reaching-defs">Reaching Definitions: The Simplest Example</h2>
+
+        <p>
+            Reaching definitions asks: "which definitions <em>might</em> still be in scope at each program point?" On traditional IR, this requires tracking gen and kill sets, iterating to a fixpoint. On SSA, the implementation is almost embarrassingly simple:
+        </p>
+
+        <pre><code><span class="keyword">for</span> len(worklist) > <span class="string">0</span> {
+    b := worklist.pop()
+
+    <span class="comment">// IN = union of all predecessors' OUT</span>
+    newIn := <span class="function">union</span>(facts[pred].Out <span class="keyword">for</span> pred <span class="keyword">in</span> b.Preds)
+
+    <span class="comment">// OUT = IN &cup; GEN</span>
+    <span class="comment">// That's it. No kill.</span>
+    newOut := newIn &cup; gen[b]
+
+    <span class="keyword">if</span> newOut changed {
+        facts[b].Out = newOut
+        worklist.add(b.Succs...)
+    }
+}</code></pre>
+
+        <p>
+            Compare this with the non-SSA version, which needs to compute kill sets for every block (which definitions in this block overwrite definitions from elsewhere?), then subtract them. Here, you just union and grow.
+        </p>
+
+        <p>
+            Of course, reaching definitions on SSA is almost a joke &mdash; if you want to know what reaches an instruction, just call <code>Operands()</code>. The definition <em>is</em> the operand. But the framework is a useful template for more interesting analyses, and the "no kill" property carries over to all of them.
+        </p>
+
+        <h2 id="convergence">How Fast Does It Converge?</h2>
+
+        <p>
+            Since facts only grow (no kill to shrink them), how many passes over the CFG does the worklist need?
+        </p>
+
+        <h3>Acyclic CFG: 1 pass</h3>
+
+        <p>
+            No loops means no back edges. Process blocks in reverse postorder, and every predecessor is handled before its successors. One pass, done.
+        </p>
+
+        <h3>Single loop: 2 passes</h3>
+
+        <p>
+            A loop introduces a back edge &mdash; an edge that goes "backward" in the reverse postorder. On the first pass, the block at the back edge target hasn't yet seen the facts from the back edge source (it was processed earlier). Pass two picks those up.
+        </p>
+
+        <div class="diagram">
+            <pre style="background: none; border: none; padding: 0; margin: 0; text-align: left; display: inline-block;"><code style="background: none;"><span class="label">B1</span> &rarr; <span class="label">B2</span> &rarr; <span class="label">B3</span>
+       &uarr;         |
+       &larr; &larr; &larr; &larr; &larr;     <span class="dim">(back edge)</span>
+
+RPO: B1, B2, B3
+
+<span class="warn">Pass 1:</span> B2 processes before B3.
+         B3 generates a fact. B2 doesn't see it yet.
+
+<span class="accent">Pass 2:</span> B2 picks up B3's fact via the back edge. Done.</code></pre>
+            <figcaption>A single back edge needs one extra pass to propagate facts backward.</figcaption>
+        </div>
+
+        <h3>Nested loops of depth <em>d</em>: <em>d</em>&nbsp;+&nbsp;1 passes</h3>
+
+        <p>
+            This is where it gets interesting. Consider a fact born in the innermost loop that needs to reach the outermost loop header. It has to cross multiple back edges, and each one costs a pass.
+        </p>
+
+        <div class="diagram">
+            <pre style="background: none; border: none; padding: 0; margin: 0; text-align: left; display: inline-block;"><code style="background: none;"><span class="label">B1</span> &rarr; <span class="label">B2</span> &rarr; <span class="label">B3</span> &rarr; <span class="label">B4</span> &rarr; <span class="label">B3</span>  <span class="dim">(inner back edge)</span>
+       &uarr;    |
+       &larr; &larr; &larr;                  <span class="dim">(outer back edge: B3 &rarr; B2)</span>
+
+Def born in <span class="warn">B4</span>.
+
+<span class="dim">Pass 1:</span> B4 has the fact. Nobody else does.
+<span class="warn">Pass 2:</span> B3 gets it via inner back edge.
+         B2 is processed <em>before</em> B3 in RPO &mdash; misses it.
+<span class="accent">Pass 3:</span> B2 finally picks it up from B3.</code></pre>
+            <figcaption>Two back edges to cross = two extra passes. In general: depth d needs d + 1 passes.</figcaption>
+        </div>
+
+        <p>
+            The fact bubbles <strong>outward</strong>, one layer per pass. Each back edge crossing costs one pass because in reverse postorder, the back edge target is processed before its source &mdash; so it only sees the updated facts on the <em>next</em> pass.
+        </p>
+
+        <p>
+            Note the direction: going from an <em>outer</em> block to an <em>inner</em> block is just forward flow along regular edges &mdash; one pass handles it. The expensive direction is <strong>inner &rarr; outer</strong>, because that's against the flow, requiring back edge crossings.
+        </p>
+
+        <h2 id="doors">The Doors Intuition</h2>
+
+        <p>
+            Here's a way to think about it that makes the pass count obvious:
+        </p>
+
+        <div class="highlight">
+            <p><strong>Each back edge is a door that only opens once per pass.</strong></p>
+        </div>
+
+        <p>
+            In reverse postorder, you process blocks top-down. A back edge goes bottom-up &mdash; against the processing direction. When you arrive at the target block, the source block's update from <em>this</em> pass hasn't happened yet. You only see it on the next pass. The door opens, the fact walks through, and the door closes until next pass.
+        </p>
+
+        <div class="diagram">
+            <pre style="background: none; border: none; padding: 0; margin: 0; text-align: left; display: inline-block;"><code style="background: none;"><span class="dim">depth 0:</span>  fact &rarr; <span class="accent">done</span>                      <span class="dim">(1 pass)</span>
+
+<span class="dim">depth 1:</span>  fact &rarr; <span class="warn">door</span> &rarr; <span class="accent">done</span>               <span class="dim">(2 passes)</span>
+
+<span class="dim">depth 2:</span>  fact &rarr; <span class="warn">door</span> &rarr; <span class="warn">door</span> &rarr; <span class="accent">done</span>        <span class="dim">(3 passes)</span>
+
+<span class="dim">depth d:</span>  fact &rarr; <span class="warn">door</span> &times; d &rarr; <span class="accent">done</span>            <span class="dim">(d+1 passes)</span></code></pre>
+            <figcaption>One door per loop nesting level. One pass to open each.</figcaption>
+        </div>
+
+        <p>
+            Compare this with non-SSA dataflow: kill sets mean a block can <em>shrink</em> what flows through it, so facts might need to circulate around a loop multiple times before the interplay of gen and kill stabilizes. That can take many more iterations. With SSA, pure growth means each door only needs to open once.
+        </p>
+
+        <h2 id="skip-blocks">Skip the Blocks Entirely</h2>
+
+        <p>
+            Here's the real payoff. The block-level worklist we just described works, but for many analyses on SSA you don't need it at all. Instead of iterating over blocks, you follow the def-use chains directly.
+        </p>
+
+        <p>
+            Consider constant propagation. You want to know: is this value always a constant?
+        </p>
+
+        <pre><code><span class="comment">// Sparse constant propagation on SSA</span>
+<span class="comment">// No block iteration. Just follow the graph.</span>
+
+worklist := [all instructions]
+
+<span class="keyword">for</span> len(worklist) > <span class="string">0</span> {
+    inst := worklist.pop()
+
+    <span class="comment">// check if all operands are constant</span>
+    <span class="keyword">if</span> <span class="function">allOperandsConst</span>(inst) {
+        result := <span class="function">fold</span>(inst)        <span class="comment">// evaluate at compile time</span>
+        lattice[inst] = Const(result)
+
+        <span class="comment">// propagate to all uses</span>
+        <span class="keyword">for</span> _, user := <span class="keyword">range</span> *inst.<span class="function">Referrers</span>() {
+            worklist.add(user)
+        }
+    }
+}</code></pre>
+
+        <p>
+            No blocks. No IN/OUT sets. No gen/kill. You seed the worklist with instructions, evaluate them, and follow <code>Referrers()</code> to propagate. The SSA graph <em>is</em> the dataflow graph.
+        </p>
+
+        <p>
+            This is called <strong>sparse analysis</strong>, and it's the main reason SSA exists in modern compilers. Instead of propagating facts through every instruction in every block (most of which are irrelevant), you only visit the instructions that matter. Loop nesting depth becomes irrelevant &mdash; there are no block-level passes to count.
+        </p>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Block-level (traditional)</th>
+                    <th>Sparse (SSA)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Unit of work</strong></td>
+                    <td>Basic block</td>
+                    <td>Individual instruction</td>
+                </tr>
+                <tr>
+                    <td><strong>Propagation</strong></td>
+                    <td>IN/OUT sets, predecessors/successors</td>
+                    <td><code>Referrers()</code> / <code>Operands()</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Kill set</strong></td>
+                    <td>Must compute</td>
+                    <td>Doesn't exist</td>
+                </tr>
+                <tr>
+                    <td><strong>Loop sensitivity</strong></td>
+                    <td>Depth <em>d</em> &rarr; <em>d</em>+1 passes</td>
+                    <td>Irrelevant</td>
+                </tr>
+                <tr>
+                    <td><strong>Wasted work</strong></td>
+                    <td>Visits all instructions in a block</td>
+                    <td>Only visits relevant instructions</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>
+            The same pattern works for dead code elimination (<code>Referrers()</code> is empty? The def is dead), copy propagation (follow the chain, replace uses), and type inference (propagate types forward through uses).
+        </p>
+
+        <p>
+            The one place that still needs care is <strong>phi nodes</strong>. A phi merges values from different predecessors, so when propagating through a phi, you need to check all incoming operands. If they all agree (all the same constant, all tainted), the phi result inherits that fact. If they disagree, you take the lattice meet. Phis are where path-sensitivity and fixpoints sneak back in &mdash; but only locally, at join points, not across entire blocks.
+        </p>
+
         <h2 id="code">Building SSA in Go</h2>
 
         <p>
@@ -850,6 +1139,9 @@ func Sum(n int) int {
                 <li><strong>Instruction vs Value:</strong> An instruction does something; a value produces a result. Many SSA objects (like <code>BinOp</code>) are both</li>
                 <li><strong>Phi nodes merge branches:</strong> When control flow joins, a phi picks the right value based on which block we came from &mdash; no condition, just edge selection</li>
                 <li><strong>Referrers() and Operands():</strong> These two methods let you walk the entire SSA graph forward (def &rarr; use) and backward (use &rarr; def)</li>
+                <li><strong>No kill set:</strong> Every SSA name is unique, so no definition overwrites another. The transfer function simplifies to <code>OUT = GEN &cup; IN</code> &mdash; facts only grow</li>
+                <li><strong>Convergence scales with nesting:</strong> Acyclic: 1 pass. Single loop: 2 passes. Nesting depth <em>d</em>: <em>d</em>+1 passes. Each back edge is a door that opens once per pass</li>
+                <li><strong>Sparse analysis skips blocks:</strong> Follow def-use chains directly via <code>Referrers()</code>. No blocks, no IN/OUT sets, no loop-depth sensitivity. This is the real payoff of SSA</li>
             </ul>
         </div>
 
@@ -861,6 +1153,12 @@ func Sum(n int) int {
                 </li>
                 <li>
                     Cytron et al. <em>Efficiently Computing Static Single Assignment Form and the Control Dependence Graph</em>. ACM TOPLAS, 1991.
+                </li>
+                <li>
+                    Wegman &amp; Zadeck. <em>Constant Propagation with Conditional Branches</em>. ACM TOPLAS, 1991. Introduced sparse conditional constant propagation (SCCP) over SSA.
+                </li>
+                <li>
+                    Aho, Lam, Sethi &amp; Ullman. <em>Compilers: Principles, Techniques, and Tools</em> (2nd ed). Chapter 9: dataflow analysis foundations.
                 </li>
                 <li>
                     Alan Donovan &amp; Brian Kernighan. <em>The Go Programming Language</em>. Chapter on tooling and analysis.
